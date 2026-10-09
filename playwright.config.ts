@@ -1,7 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import { defineBddConfig } from 'playwright-bdd';
+
+// Feature dosyalarını ve step'leri Playwright testlerine dönüştürür
+const testDir = defineBddConfig({
+  features: 'features/**/*.feature',
+  steps: 'steps/**/*.ts',
+});
 
 export default defineConfig({
-  testDir: './tests',
+  testDir,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -17,7 +24,8 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-            use: { ...devices['Desktop Chrome'], channel: process.env.CI ? undefined : 'chrome' },
+      // Lokalde bilgisayardaki Chrome, CI'da Playwright'ın Chromium'u
+      use: { ...devices['Desktop Chrome'], channel: process.env.CI ? undefined : 'chrome' },
     },
   ],
 });
