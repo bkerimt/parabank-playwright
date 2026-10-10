@@ -40,3 +40,4 @@ npm run report
 |---|---|
 | Customer Registration | Successful registration, password mismatch |
 | Customer Login | Valid login, wrong password, empty fields |
+| Open New Account | Open CHECKING and SAVINGS accounts (Scenario Outline), verify account details |
