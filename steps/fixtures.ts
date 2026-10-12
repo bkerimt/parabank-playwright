@@ -10,6 +10,7 @@ import { type Customer } from '../utils/testData';
 type ScenarioContext = {
   customer?: Customer;
   newAccountId?: string;
+  totalBalanceBefore?: number;
 };
 
 type Fixtures = {

@@ -1,7 +1,13 @@
 import { expect } from '@playwright/test';
-import { When, Then } from './fixtures';
+import { Given, When, Then } from './fixtures';
 
 When('the customer opens a new {string} account', async ({ openAccountPage, ctx }, accountType: string) => {
+  await openAccountPage.goto();
+  ctx.newAccountId = await openAccountPage.openAccount(accountType);
+});
+
+// Başka senaryolarda ön koşul olarak kullanılan hali
+Given('the customer has opened a new {string} account', async ({ openAccountPage, ctx }, accountType: string) => {
   await openAccountPage.goto();
   ctx.newAccountId = await openAccountPage.openAccount(accountType);
 });
