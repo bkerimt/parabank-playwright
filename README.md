@@ -1,49 +1,102 @@
-# ParaBank Test Automation
+# ParaBank — Playwright ile Bankacılık Test Otomasyonu
 
 ![Playwright Tests](https://github.com/bkerimt/parabank-playwright/actions/workflows/playwright.yml/badge.svg)
 
-BDD-style end-to-end test automation for the [ParaBank](https://parabank.parasoft.com) demo banking application.
+[ParaBank](https://parabank.parasoft.com) demo bankacılık uygulaması için **Playwright + TypeScript** ile yazılmış, **BDD (Given / When / Then)** yaklaşımıyla kurgulanmış uçtan uca test otomasyonu projesi.
 
-## Tech Stack
+> ⚠️ **Not:** ParaBank, Parasoft'un test pratiği için herkese açık sunduğu bir demo sitedir. Gerçek bir banka ya da gerçek müşteri verisi kullanılmaz.
 
-| Tool | Purpose |
+## Neden bu proje?
+
+Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez; **paranın doğru yerde ve doğru tutarda olması** gerekir. Bu proje şu sorulara cevap arar:
+
+- Müşteri kayıt olabiliyor ve hesabına giriş yapabiliyor mu? Hatalı girişler doğru mesajla engelleniyor mu? → **Fonksiyonel test**
+- Yeni hesap (Checking / Savings) açılabiliyor ve doğru tipte oluşuyor mu? → **Veri odaklı test (Scenario Outline)**
+- Hesap özetindeki toplam bakiye, hesapların toplamına eşit mi? → **Finansal tutarlılık**
+- Yeni hesap açıldığında müşterinin toplam varlığı değişmeden kalıyor mu? → **İş kuralı doğrulaması**
+- Paylaşılan test ortamı yanlış ayarlandığında testler bunu fark ediyor mu? → **Ortam yönetimi**
+
+## Teknolojiler
+
+| Araç | Kullanım |
 |---|---|
-| [Playwright](https://playwright.dev) | Browser automation and test runner |
-| TypeScript | Language |
-| [playwright-bdd](https://github.com/vitalets/playwright-bdd) | Gherkin (Given/When/Then) scenarios on the Playwright runner |
-| GitHub Actions | CI: tests run on every push |
+| [Playwright](https://playwright.dev) | Tarayıcı otomasyonu ve test koşucusu (runner) |
+| TypeScript | Test kodu dili |
+| [playwright-bdd](https://github.com/vitalets/playwright-bdd) | Gherkin senaryolarını Playwright runner üzerinde çalıştırma |
+| Page Object Model | Sayfa locator'ları ve işlemlerinin testlerden ayrılması |
+| GitHub Actions | Her push'ta testlerin otomatik çalışması (CI) |
 
-## Project Structure
+## Proje Yapısı
 
 ```
-features/        Gherkin scenarios (.feature) - what is tested
-setup/           Environment setup that runs before all tests
-steps/           Step definitions - how each step is executed
-  fixtures.ts    Injects Page Objects and scenario context into steps
-pages/           Page Object Model - locators and page actions
-utils/           Test data generation
+parabank-playwright/
+├── features/                   # Gherkin senaryoları: NE test ediliyor
+│   ├── login.feature
+│   ├── register.feature
+│   ├── open-account.feature
+│   └── accounts-overview.feature
+├── steps/                      # Step tanımları: her adım NASIL çalışıyor
+│   ├── fixtures.ts             # Page Object'leri ve senaryo verisini step'lere verir
+│   ├── common.steps.ts         # Birden fazla feature'ın kullandığı ortak adımlar
+│   └── *.steps.ts
+├── pages/                      # Page Object Model: locator'lar ve sayfa işlemleri
+├── setup/
+│   └── environment.setup.ts    # Testlerden önce ortamı doğrulayan hazırlık adımı
+├── utils/                      # Test verisi üretimi, tutar dönüştürme
+├── .github/workflows/          # GitHub Actions (CI) tanımı
+└── playwright.config.ts        # Tarayıcı, paralellik, timeout ve rapor ayarları
 ```
 
-Each scenario creates its own unique customer, so tests are independent of each other and of the shared demo database.
+## Mimari Kararlar
 
-### Environment setup
+- **BDD ile ortak dil:** Senaryolar Given / When / Then yapısında yazıldığı için iş birimi ve analistler tarafından da okunabilir.
+- **Katmanlı yapı:** Feature → Step → Page Object. Sitede bir buton değişirse sadece ilgili Page Object güncellenir; senaryolara dokunulmaz.
+- **Bağımsız testler:** Her senaryo kendi benzersiz müşterisini oluşturur. Testler birbirinin verisine veya paylaşılan veritabanındaki hazır kullanıcılara bağımlı değildir.
+- **Fixture'lar:** Page Object'ler ve senaryo içi veri, Playwright fixture'ları ile step'lere enjekte edilir. Paralel çalışmada testler birbirinin verisini bozmaz.
 
-ParaBank is a public, shared demo environment and anyone can change its admin settings. Before the test suite runs, a Playwright **setup project** (`setup/environment.setup.ts`) checks that the data access mode is set to the default (JDBC) and restores it if needed. The BDD tests depend on this setup project, so they never run against a misconfigured environment.
+### Ortam hazırlığı
 
-## Running the Tests
+ParaBank paylaşılan bir demo ortam ve admin ayarlarını herkes değiştirebiliyor. Bir gün login testi beklenen "hatalı şifre" mesajı yerine "internal error" ile kırıldı. Kök neden analizinde, başka bir kullanıcının **Data Access Mode** ayarını varsayılan değer olan JDBC'den REST'e çevirdiği görüldü.
+
+Testi gevşetmek yerine Playwright'ın **setup project** özelliğiyle bir hazırlık adımı eklendi: Testlerden önce ayar kontrol ediliyor, gerekirse varsayılan değere döndürülüyor. BDD testleri bu adıma bağımlı olduğu için yanlış ayarlanmış bir ortamda hiç çalışmıyor.
+
+### Paralellik ve timeout
+
+Worker sayısı ölçümle belirlendi: 6 paralel worker ile süre 1.5 dakikayken, 3 worker ile 1.1 dakikaya düştü. Darboğaz yerel makine değil, paylaşılan ParaBank sunucusuydu. Daha fazla paralellik her zaman daha hızlı demek değil.
+
+## Kurulum ve Çalıştırma
+
+Gereksinim: [Node.js](https://nodejs.org) (LTS sürümü)
 
 ```bash
-npm install
-npx playwright install chromium
-npm test
-npm run report
+npm install                      # Bağımlılıkları kur
+npx playwright install chromium  # Tarayıcıyı indir
+npm test                         # Feature'ları teste dönüştür ve çalıştır
+npm run report                   # HTML raporunu aç
 ```
 
-## Test Coverage
+> Windows'ta PowerShell betik çalıştırmayı engelliyorsa `npm` yerine `npm.cmd`, `npx` yerine `npx.cmd` kullanın.
 
-| Feature | Scenarios |
+## Test Kapsamı
+
+| Özellik | Senaryolar |
 |---|---|
-| Customer Registration | Successful registration, password mismatch |
-| Customer Login | Valid login, wrong password, empty fields |
-| Open New Account | Open CHECKING and SAVINGS accounts (Scenario Outline), verify account details |
-| Accounts Overview | New account is listed, total equals sum of balances, total unchanged after opening an account |
+| Ortam hazırlığı | Data Access Mode'un varsayılan (JDBC) değerde olduğunu doğrulama |
+| Müşteri Kaydı | Başarılı kayıt, şifreler eşleşmediğinde kaydın engellenmesi |
+| Müşteri Girişi | Geçerli giriş, hatalı şifre, boş alanlar |
+| Yeni Hesap Açma | CHECKING ve SAVINGS hesap açma (Scenario Outline), hesap detayında tip doğrulama |
+| Hesap Özeti | Yeni hesabın listede görünmesi, toplam bakiyenin hesapların toplamına eşit olması, hesap açılınca toplam varlığın değişmemesi |
+
+## Yol Haritası
+
+- [x] **Aşama 1** — BDD altyapısı (playwright-bdd), Page Object Model, kayıt ve giriş senaryoları, CI
+- [x] **Aşama 2** — Yeni hesap açma (Scenario Outline), hesap özeti ve bakiye tutarlılığı, ortam hazırlığı (setup project)
+- [ ] **Aşama 3** — Hesaplar arası para transferi ve iki hesapta bakiye doğrulama, fatura ödeme
+- [ ] **Aşama 4** — Kredi başvurusu (farklı tutar ve sonuçlarla), işlem arama
+- [ ] **Aşama 5** — API testleri, API ile hızlı test verisi hazırlama (hibrit test)
+- [ ] **Aşama 6** — Etiketler (@smoke, @regression), çoklu tarayıcı, sonuçların raporlanması
+
+## Yazar
+
+**Beytullah Kerim Türkel** — Senior Software Testing & Quality Specialist
+[LinkedIn](https://www.linkedin.com/in/bkerimt) · [GitHub](https://github.com/bkerimt)
