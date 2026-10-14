@@ -1,5 +1,10 @@
 import { type Page, type Locator } from '@playwright/test';
 
+export type OpenedAccount = {
+  newAccountId: string;
+  fromAccountId: string; // Açılış tutarının çekildiği mevcut hesap
+};
+
 export class OpenAccountPage {
   readonly page: Page;
   readonly accountTypeSelect: Locator;
@@ -21,17 +26,19 @@ export class OpenAccountPage {
     await this.page.goto('openaccount.htm');
   }
 
-  // Yeni hesap açar ve yeni hesap numarasını döndürür
-  async openAccount(accountType: string): Promise<string> {
+  // Yeni hesap açar; yeni hesap numarasını ve paranın çekildiği hesabı döndürür
+  async openAccount(accountType: string): Promise<OpenedAccount> {
     await this.accountTypeSelect.selectOption({ label: accountType });
 
     // Kaynak hesap listesi sayfa açıldıktan sonra arka planda (AJAX) yükleniyor.
     // Liste dolmadan butona basılırsa ParaBank hata veriyor, bu yüzden bekliyoruz.
     await this.fromAccountSelect.locator('option').first().waitFor({ state: 'attached' });
+    const fromAccountId = await this.fromAccountSelect.inputValue();
 
     await this.openAccountButton.click();
     await this.newAccountLink.waitFor({ state: 'visible' });
 
-    return (await this.newAccountLink.innerText()).trim();
+    const newAccountId = (await this.newAccountLink.innerText()).trim();
+    return { newAccountId, fromAccountId };
   }
 }

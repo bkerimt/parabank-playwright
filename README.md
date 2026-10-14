@@ -86,6 +86,15 @@ npm run report                   # HTML raporunu aç
 | Müşteri Girişi | Geçerli giriş, hatalı şifre, boş alanlar |
 | Yeni Hesap Açma | CHECKING ve SAVINGS hesap açma (Scenario Outline), hesap detayında tip doğrulama |
 | Hesap Özeti | Yeni hesabın listede görünmesi, toplam bakiyenin hesapların toplamına eşit olması, hesap açılınca toplam varlığın değişmemesi |
+| Para Transferi | İki hesapta da bakiye doğrulama (gönderen azalır, alan artar), işlemin iki hesabın hareketlerinde görünmesi, bakiye fazlası transferin reddedilmesi (bilinen hata) |
+
+## Bilinen Hatalar
+
+Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen hatalar. Bu etiket, senaryonun şu an başarısız olmasının beklendiğini belirtir; böylece suite yeşil kalır ama hata görünür olur. Hata düzeltilirse test beklenmedik şekilde geçer ve kırmızıya döner; bu da etiketin kaldırılması gerektiğini haber verir.
+
+| Hata | Beklenen | Gerçekleşen | Senaryo |
+|---|---|---|---|
+| Transferde bakiye kontrolü yok | Bakiyeyi aşan transfer reddedilmeli | Transfer gerçekleşiyor, hesap eksiye düşüyor | `transfer.feature` → *Transfer exceeding the available balance should be rejected* |
 
 ## Yol Haritası
 

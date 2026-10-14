@@ -4,13 +4,16 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { AccountsOverviewPage } from '../pages/AccountsOverviewPage';
 import { OpenAccountPage } from '../pages/OpenAccountPage';
 import { AccountDetailsPage } from '../pages/AccountDetailsPage';
+import { TransferPage } from '../pages/TransferPage';
 import { type Customer } from '../utils/testData';
 
 // Senaryo boyunca adımlar arasında taşınan veri
-type ScenarioContext = {
+export type ScenarioContext = {
   customer?: Customer;
-  newAccountId?: string;
+  originalAccountId?: string; // Kayıtta otomatik açılan ilk hesap
+  newAccountId?: string; // Senaryo içinde açılan yeni hesap
   totalBalanceBefore?: number;
+  balancesBefore: Record<string, number>; // İşlemden önceki bakiyeler (hesap no -> bakiye)
 };
 
 type Fixtures = {
@@ -19,6 +22,7 @@ type Fixtures = {
   overviewPage: AccountsOverviewPage;
   openAccountPage: OpenAccountPage;
   accountDetailsPage: AccountDetailsPage;
+  transferPage: TransferPage;
   ctx: ScenarioContext;
 };
 
@@ -39,9 +43,21 @@ export const test = base.extend<Fixtures>({
   accountDetailsPage: async ({ page }, use) => {
     await use(new AccountDetailsPage(page));
   },
+  transferPage: async ({ page }, use) => {
+    await use(new TransferPage(page));
+  },
   ctx: async ({}, use) => {
-    await use({});
+    await use({ balancesBefore: {} });
   },
 });
 
 export const { Given, When, Then } = createBdd(test);
+
+// Feature dosyasındaki "original" / "new" kelimesini gerçek hesap numarasına çevirir
+export function accountIdFor(role: string, ctx: ScenarioContext): string {
+  const accountId = role === 'original' ? ctx.originalAccountId : role === 'new' ? ctx.newAccountId : undefined;
+  if (!accountId) {
+    throw new Error(`"${role}" hesabı bu senaryoda henüz oluşturulmadı`);
+  }
+  return accountId;
+}
