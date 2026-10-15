@@ -60,6 +60,15 @@ ParaBank paylaşılan bir demo ortam ve admin ayarlarını herkes değiştirebil
 
 Testi gevşetmek yerine Playwright'ın **setup project** özelliğiyle bir hazırlık adımı eklendi: Testlerden önce ayar kontrol ediliyor, gerekirse varsayılan değere döndürülüyor. BDD testleri bu adıma bağımlı olduğu için yanlış ayarlanmış bir ortamda hiç çalışmıyor.
 
+### Rate limit (istek sınırlama)
+
+Testler bir gün yerelde geçerken CI'da zaman aşımıyla kırıldı. Log'da "kayıt formu bulunamadı" görünüyordu, ama CI'ın yüklediği rapordaki ekran görüntüsü asıl sebebi gösterdi: **Cloudflare Error 1015 – You are being rate limited.** ParaBank'ın önündeki Cloudflare, kısa sürede çok istek gelen IP adreslerini geçici olarak engelliyor. GitHub Actions sunucuları paylaşılan IP adresleri kullandığı için bu risk CI'da daha yüksek.
+
+Yapılan iyileştirmeler:
+- **Hızlı ve anlaşılır hata:** Sayfa açılırken HTTP 429 gelirse test 60 saniye beklemek yerine hemen, sebebini açıkça söyleyen bir mesajla duruyor (`utils/navigation.ts`). Sayfa dışı isteklerdeki 429'lar da rapora not olarak ekleniyor.
+- **Daha az istek:** Resim, font ve medya dosyaları indirilmiyor; testlerin doğruladığı hiçbir şey bunlara bağlı değil (`steps/fixtures.ts` → `requestGuard`).
+- **Daha az tekrar:** CI'da retry sayısı 2'den 1'e indirildi; engellenmiş bir IP'den hemen tekrar denemek engeli uzatıyor.
+
 ### Paralellik ve timeout
 
 Worker sayısı ölçümle belirlendi: 6 paralel worker ile süre 1.5 dakikayken, 3 worker ile 1.1 dakikaya düştü. Darboğaz yerel makine değil, paylaşılan ParaBank sunucusuydu. Daha fazla paralellik her zaman daha hızlı demek değil.
@@ -91,6 +100,8 @@ npm run report                   # HTML raporunu aç
 ## Bilinen Hatalar
 
 Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen hatalar. Bu etiket, senaryonun şu an başarısız olmasının beklendiğini belirtir; böylece suite yeşil kalır ama hata görünür olur. Hata düzeltilirse test beklenmedik şekilde geçer ve kırmızıya döner; bu da etiketin kaldırılması gerektiğini haber verir.
+
+> **Dikkat:** `@fail` her türlü hatayı "beklenen" sayar. Bu yüzden bu senaryoların raporda **doğru adımda ve doğru sebeple** başarısız olduğu kontrol edilir. Ayrıca `@fail`, Background adımlarındaki (ör. kayıt) hataları kapsamaz; bunlar normal hata olarak raporlanır.
 
 | Hata | Beklenen | Gerçekleşen | Senaryo |
 |---|---|---|---|

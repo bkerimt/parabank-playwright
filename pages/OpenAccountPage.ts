@@ -1,4 +1,5 @@
 import { type Page, type Locator } from '@playwright/test';
+import { openPage } from '../utils/navigation';
 
 export type OpenedAccount = {
   newAccountId: string;
@@ -23,7 +24,7 @@ export class OpenAccountPage {
   }
 
   async goto() {
-    await this.page.goto('openaccount.htm');
+    await openPage(this.page, 'openaccount.htm');
   }
 
   // Yeni hesap açar; yeni hesap numarasını ve paranın çekildiği hesabı döndürür

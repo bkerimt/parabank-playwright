@@ -16,10 +16,12 @@ const browser = {
 export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : 3,
+  // CI'da 1 tekrar deneme: Rate limit'e takıldığımızda hemen tekrar tekrar denemek engeli uzatıyor
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 1 : 3,
   timeout: 60_000,
-  reporter: 'html',
+  // CI'da hatalar ayrıca GitHub'daki çalışma özet sayfasında da görünsün (github reporter)
+  reporter: process.env.CI ? [['list'], ['github'], ['html']] : 'html',
 
   use: {
     baseURL: 'https://parabank.parasoft.com/parabank/',

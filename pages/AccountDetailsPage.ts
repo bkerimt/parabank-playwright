@@ -1,5 +1,6 @@
 import { type Page, type Locator } from '@playwright/test';
 import { parseCurrency } from '../utils/currency';
+import { openPage } from '../utils/navigation';
 
 export class AccountDetailsPage {
   readonly page: Page;
@@ -19,7 +20,7 @@ export class AccountDetailsPage {
   }
 
   async goto(accountId: string) {
-    await this.page.goto(`activity.htm?id=${accountId}`);
+    await openPage(this.page, `activity.htm?id=${accountId}`);
   }
 
   async getBalance(): Promise<number> {

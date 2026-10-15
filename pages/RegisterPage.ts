@@ -1,5 +1,6 @@
 import { type Page, type Locator } from '@playwright/test';
 import { type Customer } from '../utils/testData';
+import { openPage } from '../utils/navigation';
 
 export class RegisterPage {
   readonly page: Page;
@@ -19,7 +20,7 @@ export class RegisterPage {
   }
 
   async goto() {
-    await this.page.goto('register.htm');
+    await openPage(this.page, 'register.htm');
   }
 
   async register(customer: Customer, repeatedPassword = customer.password) {

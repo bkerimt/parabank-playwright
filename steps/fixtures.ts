@@ -24,6 +24,7 @@ type Fixtures = {
   accountDetailsPage: AccountDetailsPage;
   transferPage: TransferPage;
   ctx: ScenarioContext;
+  requestGuard: void;
 };
 
 // Her senaryoya hazır sayfa nesneleri ve boş bir veri kutusu verir
@@ -49,6 +50,33 @@ export const test = base.extend<Fixtures>({
   ctx: async ({}, use) => {
     await use({ balancesBefore: {} });
   },
+
+  // Her senaryoya otomatik uygulanır ("auto: true"), step'lerde ayrıca istemeye gerek yok.
+  // 1) Resim, font ve medya dosyalarını indirmiyoruz: Testlerin doğruladığı hiçbir şey bunlara bağlı değil,
+  //    ama her sayfada isteklerin büyük kısmını oluşturuyorlar. Daha az istek = rate limit'e takılma riski daha düşük.
+  // 2) ParaBank bir isteği sınırlarsa (HTTP 429) bunu rapora not olarak ekliyoruz; böylece zaman aşımı gibi
+  //    görünen bir hatanın asıl sebebi raporda hemen görülüyor.
+  requestGuard: [
+    async ({ page }, use, testInfo) => {
+      await page.route('**/*', (route) =>
+        ['image', 'font', 'media'].includes(route.request().resourceType()) ? route.abort() : route.continue()
+      );
+
+      let rateLimited = false;
+      page.on('response', (response) => {
+        if (response.status() === 429 && !rateLimited) {
+          rateLimited = true;
+          testInfo.annotations.push({
+            type: 'rate-limit',
+            description: `ParaBank isteği sınırladı (HTTP 429): ${response.url()}`,
+          });
+        }
+      });
+
+      await use();
+    },
+    { auto: true },
+  ],
 });
 
 export const { Given, When, Then } = createBdd(test);

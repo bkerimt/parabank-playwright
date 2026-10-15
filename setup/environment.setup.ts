@@ -1,4 +1,5 @@
 import { test as setup, expect } from '@playwright/test';
+import { openPage } from '../utils/navigation';
 
 /*
  * ParaBank herkese açık, paylaşılan bir demo ortam. Admin sayfasındaki ayarları
@@ -9,7 +10,7 @@ import { test as setup, expect } from '@playwright/test';
  * varsayılan ayarına (JDBC) getirir. Ayar zaten doğruysa hiçbir şeyi değiştirmez.
  */
 setup('ParaBank data access mode is JDBC', async ({ page }) => {
-  await page.goto('admin.htm');
+  await openPage(page, 'admin.htm');
 
   const jdbcOption = page.locator('input[name="accessMode"][value="jdbc"]');
 

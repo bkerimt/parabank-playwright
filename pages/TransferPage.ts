@@ -1,4 +1,5 @@
 import { type Page, type Locator } from '@playwright/test';
+import { openPage } from '../utils/navigation';
 
 export class TransferPage {
   readonly page: Page;
@@ -26,7 +27,7 @@ export class TransferPage {
   }
 
   async goto() {
-    await this.page.goto('transfer.htm');
+    await openPage(this.page, 'transfer.htm');
   }
 
   async transfer(amount: number, fromAccountId: string, toAccountId: string) {
@@ -42,6 +43,7 @@ export class TransferPage {
 
     // Transfer arka planda gönderiliyor. Sonuç (başarı ya da hata) ekranda görünmeden
     // başka sayfaya geçersek istek yarıda kalabilir; bu yüzden sonucu bekliyoruz.
-        await this.resultTitle.or(this.errorTitle).filter({ visible: true }).waitFor();
+    // İki başlık da sayfada baştan var (biri gizli); sadece görünür olanı bekliyoruz
+    await this.resultTitle.or(this.errorTitle).filter({ visible: true }).waitFor();
   }
 }

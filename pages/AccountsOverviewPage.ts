@@ -1,5 +1,6 @@
 import { type Page, type Locator } from '@playwright/test';
 import { parseCurrency } from '../utils/currency';
+import { openPage } from '../utils/navigation';
 
 export class AccountsOverviewPage {
   readonly page: Page;
@@ -22,7 +23,7 @@ export class AccountsOverviewPage {
   }
 
   async goto() {
-    await this.page.goto('overview.htm');
+    await openPage(this.page, 'overview.htm');
     // Tablo sayfa açıldıktan sonra arka planda dolduruluyor; Total satırı en son ekleniyor
     await this.totalRow.waitFor({ state: 'visible' });
   }

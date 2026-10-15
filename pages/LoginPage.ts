@@ -1,4 +1,5 @@
 import { type Page, type Locator } from '@playwright/test';
+import { openPage } from '../utils/navigation';
 
 export class LoginPage {
   readonly page: Page;
@@ -16,7 +17,7 @@ export class LoginPage {
   }
 
   async goto() {
-    await this.page.goto('index.htm');
+    await openPage(this.page, 'index.htm');
   }
 
   async login(username: string, password: string) {
