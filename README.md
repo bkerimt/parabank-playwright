@@ -74,7 +74,7 @@ Yapılan iyileştirmeler:
 
 Paylaşılan ParaBank'ta yaşanan üç sorunun (admin ayarının başkası tarafından değiştirilmesi, veritabanının bozulup kayıt işleminin herkes için çalışmaz hale gelmesi, rate limit) ortak sebebi **ortamın paylaşılmasıydı**. Kalıcı çözüm olarak CI, testleri artık herkese açık site yerine ParaBank'ın resmi Docker imajından (`parasoft/parabank`) her çalışmada sıfırdan başlatılan **kendi kopyasına** karşı çalıştırıyor:
 
-- GitHub Actions, ParaBank'ı bir **service container** olarak başlatıyor ve uygulama cevap verene kadar bekliyor.
+- GitHub Actions, ParaBank'ı bir **service container** olarak başlatıyor ve testlerden önce uygulamanın **gerçekten hazır** olduğunu doğruluyor: API üzerinden örnek kullanıcıyla giriş ve bir deneme kaydı başarılı olana kadar bekliyor. Sadece ana sayfanın açılmasını beklemek yetmedi; uygulama "ısınmadan" başlayan ilk kayıt işlemleri kırılıyordu.
 - Testlerin hangi adrese gideceği `BASE_URL` ortam değişkeniyle belirleniyor; tanımlı değilse herkese açık ParaBank kullanılıyor.
 - Her çalışma temiz bir veritabanıyla başladığı için sonuçlar tekrarlanabilir; başka kullanıcıların işlemlerinden etkilenmiyor.
 - İzole ortamda ayarları kimse değiştiremediği için ortam hazırlık adımı (`setup`) CI'da atlanıyor (`PARABANK_ISOLATED=true`).

@@ -31,17 +31,45 @@ jobs:
       run: npm install
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
-    - name: Wait for ParaBank to start
+    - name: Wait for ParaBank to be ready
       run: |
+        # 1) Veritabanina dokunan bir API cagrisi (ornek kullanici john/demo ile giris) basarili olana kadar bekle
         for i in $(seq 1 60); do
-          if curl -sf -o /dev/null "${BASE_URL}index.htm"; then
-            echo "ParaBank is up"
-            exit 0
+          if curl -sf -o /dev/null "${BASE_URL}services/bank/login/john/demo"; then
+            echo "ParaBank API is up ($i)"
+            break
           fi
-          echo "Waiting for ParaBank... ($i)"
+          if [ "$i" -eq 60 ]; then
+            echo "ParaBank API did not become ready within 5 minutes"
+            exit 1
+          fi
+          echo "Waiting for ParaBank API... ($i)"
           sleep 5
         done
-        echo "ParaBank did not start within 5 minutes"
+
+        # 2) Testlerin ilk adimi olan kayit islemi gercekten calisana kadar bir deneme kaydi yap
+        for i in $(seq 1 30); do
+          user="warmup$(date +%s%N | cut -c1-12)"
+          if curl -s "${BASE_URL}register.htm" \
+              --data-urlencode "customer.firstName=Warm" \
+              --data-urlencode "customer.lastName=Up" \
+              --data-urlencode "customer.address.street=Street 1" \
+              --data-urlencode "customer.address.city=Istanbul" \
+              --data-urlencode "customer.address.state=Istanbul" \
+              --data-urlencode "customer.address.zipCode=34000" \
+              --data-urlencode "customer.phoneNumber=5550000000" \
+              --data-urlencode "customer.ssn=123-45-6789" \
+              --data-urlencode "customer.username=${user}" \
+              --data-urlencode "customer.password=Warm1234!" \
+              --data-urlencode "repeatedPassword=Warm1234!" \
+              | grep -q "Welcome ${user}"; then
+            echo "Registration works ($i)"
+            exit 0
+          fi
+          echo "Registration not ready yet ($i)"
+          sleep 5
+        done
+        echo "Registration never succeeded"
         exit 1
     - name: Generate BDD tests
       run: npx bddgen
