@@ -66,9 +66,13 @@ jobs:
         done
 
         # 3) Testlerin ilk adimi olan kayit islemi gercekten calisiyor mu? Bir deneme kaydi yap.
+        #    ParaBank, formun gonderilmesi icin kayit sayfasinin ayni oturumda once acilmis olmasini istiyor;
+        #    bu yuzden once sayfayi acip oturum cerezini sakliyoruz, formu ayni cerezle gonderiyoruz.
+        jar="$(mktemp)"
         for i in $(seq 1 12); do
           user="warmup$(date +%s%N | cut -c1-12)"
-          if curl -s "${BASE_URL}register.htm" \
+          curl -s -c "$jar" -b "$jar" -o /dev/null "${BASE_URL}register.htm"
+          if curl -s -c "$jar" -b "$jar" "${BASE_URL}register.htm" \
               --data-urlencode "customer.firstName=Warm" \
               --data-urlencode "customer.lastName=Up" \
               --data-urlencode "customer.address.street=Street 1" \
