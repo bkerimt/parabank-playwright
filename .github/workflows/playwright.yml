@@ -48,19 +48,20 @@ jobs:
         done
 
         # 2) Docker imajinda veritabani bos basliyor (ornek musteriler, ayarlar ve numara sayaclari yok).
-        #    Admin sayfasindaki INITIALIZE islemiyle ornek verileri yukle; ornek kullanici john/demo
-        #    ile API uzerinden giris calisana kadar tekrar dene.
+        #    ParaBank'in REST API'sindeki initializeDB servisiyle ornek verileri yukle; ornek kullanici
+        #    john/demo ile API uzerinden giris calisana kadar tekrar dene. Her denemede HTTP kodlarini yazdir.
         for i in $(seq 1 12); do
-          if curl -sf -o /dev/null "${BASE_URL}services/bank/login/john/demo"; then
+          login_code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}services/bank/login/john/demo")
+          if [ "$login_code" = "200" ]; then
             echo "Database is initialized ($i)"
             break
           fi
           if [ "$i" -eq 12 ]; then
-            echo "Database could not be initialized"
+            echo "Database could not be initialized (last login HTTP code: $login_code)"
             exit 1
           fi
-          echo "Initializing database... ($i)"
-          curl -s -o /dev/null -X POST "${BASE_URL}db.htm" --data-urlencode "action=INIT"
+          init_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE_URL}services/bank/initializeDB")
+          echo "Initializing database... ($i) login HTTP $login_code, initializeDB HTTP $init_code"
           sleep 5
         done
 
