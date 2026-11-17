@@ -6,8 +6,21 @@ on:
     branches: [ main ]
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     runs-on: ubuntu-latest
+
+    # Testler herkese açık (paylaşılan) ParaBank yerine, her çalışmada sıfırdan başlatılan
+    # kendi ParaBank kopyamıza karşı çalışır: rate limit yok, başkalarının değiştirdiği ayar
+    # ya da bozduğu veri yok.
+    services:
+      parabank:
+        image: parasoft/parabank:latest
+        ports:
+          - 8080:8080
+
+    env:
+      BASE_URL: http://localhost:8080/parabank/
+
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -17,6 +30,18 @@ jobs:
       run: npm install
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
+    - name: Wait for ParaBank to start
+      run: |
+        for i in $(seq 1 60); do
+          if curl -sf -o /dev/null "${BASE_URL}index.htm"; then
+            echo "ParaBank is up"
+            exit 0
+          fi
+          echo "Waiting for ParaBank... ($i)"
+          sleep 5
+        done
+        echo "ParaBank did not start within 5 minutes"
+        exit 1
     - name: Generate BDD tests
       run: npx bddgen
     - name: Run Playwright tests

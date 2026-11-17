@@ -24,7 +24,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['github'], ['html']] : 'html',
 
   use: {
-    baseURL: 'https://parabank.parasoft.com/parabank/',
+    // Varsayılan: herkese açık ParaBank. CI'da BASE_URL ile kendi ParaBank kopyamıza yönlendiriliyor.
+    baseURL: process.env.BASE_URL ?? 'https://parabank.parasoft.com/parabank/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },

@@ -25,6 +25,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 | [playwright-bdd](https://github.com/vitalets/playwright-bdd) | Gherkin senaryolarını Playwright runner üzerinde çalıştırma |
 | Page Object Model | Sayfa locator'ları ve işlemlerinin testlerden ayrılması |
 | GitHub Actions | Her push'ta testlerin otomatik çalışması (CI) |
+| Docker | CI'da her çalışmada sıfırdan başlatılan, izole ParaBank kopyası |
 
 ## Proje Yapısı
 
@@ -66,8 +67,16 @@ Testler bir gün yerelde geçerken CI'da zaman aşımıyla kırıldı. Log'da "k
 
 Yapılan iyileştirmeler:
 - **Hızlı ve anlaşılır hata:** Sayfa açılırken HTTP 429 gelirse test 60 saniye beklemek yerine hemen, sebebini açıkça söyleyen bir mesajla duruyor (`utils/navigation.ts`). Sayfa dışı isteklerdeki 429'lar da rapora not olarak ekleniyor.
-- **Daha az istek:** Resim, font ve medya dosyaları indirilmiyor; testlerin doğruladığı hiçbir şey bunlara bağlı değil (`steps/fixtures.ts` → `requestGuard`).
+- **Daha az istek:** Resim, font ve medya dosyaları indirilmiyor; testlerin doğruladığı hiçbir şey bunlara bağlı değil (`steps/fixtures.ts` → `requestGuard`). Yan etkisi olarak suite süresi aynı makinede **1.4 dakikadan 54 saniyeye** düştü.
 - **Daha az tekrar:** CI'da retry sayısı 2'den 1'e indirildi; engellenmiş bir IP'den hemen tekrar denemek engeli uzatıyor.
+
+### İzole test ortamı (CI)
+
+Paylaşılan ParaBank'ta yaşanan üç sorunun (admin ayarının başkası tarafından değiştirilmesi, veritabanının bozulup kayıt işleminin herkes için çalışmaz hale gelmesi, rate limit) ortak sebebi **ortamın paylaşılmasıydı**. Kalıcı çözüm olarak CI, testleri artık herkese açık site yerine ParaBank'ın resmi Docker imajından (`parasoft/parabank`) her çalışmada sıfırdan başlatılan **kendi kopyasına** karşı çalıştırıyor:
+
+- GitHub Actions, ParaBank'ı bir **service container** olarak başlatıyor ve uygulama cevap verene kadar bekliyor.
+- Testlerin hangi adrese gideceği `BASE_URL` ortam değişkeniyle belirleniyor; tanımlı değilse herkese açık ParaBank kullanılıyor.
+- Her çalışma temiz bir veritabanıyla başladığı için sonuçlar tekrarlanabilir; başka kullanıcıların işlemlerinden etkilenmiyor.
 
 ### Paralellik ve timeout
 
@@ -85,6 +94,14 @@ npm run report                   # HTML raporunu aç
 ```
 
 > Windows'ta PowerShell betik çalıştırmayı engelliyorsa `npm` yerine `npm.cmd`, `npx` yerine `npx.cmd` kullanın.
+
+Docker yüklüyse testleri yerelde de izole bir ParaBank'a karşı çalıştırabilirsiniz:
+
+```bash
+docker run -d -p 8080:8080 parasoft/parabank
+BASE_URL=http://localhost:8080/parabank/ npm test
+```
+
 
 ## Test Kapsamı
 
