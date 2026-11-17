@@ -10,6 +10,10 @@ import { openPage } from '../utils/navigation';
  * varsayılan ayarına (JDBC) getirir. Ayar zaten doğruysa hiçbir şeyi değiştirmez.
  */
 setup('ParaBank data access mode is JDBC', async ({ page }) => {
+  // CI'da her çalışmada sıfırdan başlatılan kendi ParaBank kopyamızı kullanıyoruz.
+  // Orada ayarları kimse değiştiremez ve zaten varsayılan değerdedir; bu kontrole gerek yok.
+  setup.skip(process.env.PARABANK_ISOLATED === 'true', 'İzole ParaBank kullanılıyor; ayarlar zaten varsayılan değerde');
+
   await openPage(page, 'admin.htm');
 
   const jdbcOption = page.locator('input[name="accessMode"][value="jdbc"]');

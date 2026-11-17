@@ -77,6 +77,8 @@ Paylaşılan ParaBank'ta yaşanan üç sorunun (admin ayarının başkası taraf
 - GitHub Actions, ParaBank'ı bir **service container** olarak başlatıyor ve uygulama cevap verene kadar bekliyor.
 - Testlerin hangi adrese gideceği `BASE_URL` ortam değişkeniyle belirleniyor; tanımlı değilse herkese açık ParaBank kullanılıyor.
 - Her çalışma temiz bir veritabanıyla başladığı için sonuçlar tekrarlanabilir; başka kullanıcıların işlemlerinden etkilenmiyor.
+- İzole ortamda ayarları kimse değiştiremediği için ortam hazırlık adımı (`setup`) CI'da atlanıyor (`PARABANK_ISOLATED=true`).
+- CI kırılırsa ParaBank'ın sunucu logları otomatik olarak çalışma çıktısına yazdırılıyor; uygulama tarafındaki hatalar da görülebiliyor.
 
 ### Paralellik ve timeout
 
