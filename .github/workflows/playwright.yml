@@ -31,24 +31,41 @@ jobs:
       run: npm install
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
-    - name: Wait for ParaBank to be ready
+    - name: Prepare ParaBank
       run: |
-        # 1) Veritabanina dokunan bir API cagrisi (ornek kullanici john/demo ile giris) basarili olana kadar bekle
+        # 1) Uygulama cevap verene kadar bekle
         for i in $(seq 1 60); do
-          if curl -sf -o /dev/null "${BASE_URL}services/bank/login/john/demo"; then
-            echo "ParaBank API is up ($i)"
+          if curl -sf -o /dev/null "${BASE_URL}index.htm"; then
+            echo "ParaBank is up ($i)"
             break
           fi
           if [ "$i" -eq 60 ]; then
-            echo "ParaBank API did not become ready within 5 minutes"
+            echo "ParaBank did not start within 5 minutes"
             exit 1
           fi
-          echo "Waiting for ParaBank API... ($i)"
+          echo "Waiting for ParaBank... ($i)"
           sleep 5
         done
 
-        # 2) Testlerin ilk adimi olan kayit islemi gercekten calisana kadar bir deneme kaydi yap
-        for i in $(seq 1 30); do
+        # 2) Docker imajinda veritabani bos basliyor (ornek musteriler, ayarlar ve numara sayaclari yok).
+        #    Admin sayfasindaki INITIALIZE islemiyle ornek verileri yukle; ornek kullanici john/demo
+        #    ile API uzerinden giris calisana kadar tekrar dene.
+        for i in $(seq 1 12); do
+          if curl -sf -o /dev/null "${BASE_URL}services/bank/login/john/demo"; then
+            echo "Database is initialized ($i)"
+            break
+          fi
+          if [ "$i" -eq 12 ]; then
+            echo "Database could not be initialized"
+            exit 1
+          fi
+          echo "Initializing database... ($i)"
+          curl -s -o /dev/null -X POST "${BASE_URL}db.htm" --data-urlencode "action=INIT"
+          sleep 5
+        done
+
+        # 3) Testlerin ilk adimi olan kayit islemi gercekten calisiyor mu? Bir deneme kaydi yap.
+        for i in $(seq 1 12); do
           user="warmup$(date +%s%N | cut -c1-12)"
           if curl -s "${BASE_URL}register.htm" \
               --data-urlencode "customer.firstName=Warm" \
