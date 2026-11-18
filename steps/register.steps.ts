@@ -24,6 +24,8 @@ Then('the welcome message for the new customer should be displayed', async ({ re
   await expect(registerPage.pageTitle).toHaveText(`Welcome ${customer.username}`);
 });
 
+// Genel amaçlı mesaj kontrolü. Bazı sayfalarda aynı metin gizli olarak birden fazla yerde duruyor
+// (ör. fatura ödemede "Account number is required." iki alan için var); sadece görünür olana bakıyoruz.
 Then('the message {string} should be displayed', async ({ page }, message: string) => {
-  await expect(page.getByText(message)).toBeVisible();
+  await expect(page.getByText(message).filter({ visible: true })).toBeVisible();
 });

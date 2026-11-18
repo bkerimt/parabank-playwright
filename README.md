@@ -54,6 +54,8 @@ parabank-playwright/
 - **Katmanlı yapı:** Feature → Step → Page Object. Sitede bir buton değişirse sadece ilgili Page Object güncellenir; senaryolara dokunulmaz.
 - **Bağımsız testler:** Her senaryo kendi benzersiz müşterisini oluşturur. Testler birbirinin verisine veya paylaşılan veritabanındaki hazır kullanıcılara bağımlı değildir.
 - **Fixture'lar:** Page Object'ler ve senaryo içi veri, Playwright fixture'ları ile step'lere enjekte edilir. Paralel çalışmada testler birbirinin verisini bozmaz.
+- **Dayanıklı locator'lar:** ParaBank, fatura ödeme formundaki telefon alanının `id` ve `class` değerlerini her sayfa açılışında rastgele üretiyor. Bu tür alanlar değişmeyen `name` niteliğiyle bulunuyor.
+- **Asenkron işlemleri beklemek:** Transfer, hesap açma ve fatura ödeme istekleri arka planda (AJAX) gönderiliyor. Page Object'ler, işlem sonucu ekranda görünmeden bir sonraki adıma geçmiyor; böylece yarıda kalan istekler yüzünden oluşacak yanıltıcı sonuçlar önleniyor.
 
 ### Ortam hazırlığı
 
@@ -115,6 +117,7 @@ BASE_URL=http://localhost:8080/parabank/ npm test
 | Yeni Hesap Açma | CHECKING ve SAVINGS hesap açma (Scenario Outline), hesap detayında tip doğrulama |
 | Hesap Özeti | Yeni hesabın listede görünmesi, toplam bakiyenin hesapların toplamına eşit olması, hesap açılınca toplam varlığın değişmemesi |
 | Para Transferi | İki hesapta da bakiye doğrulama (gönderen azalır, alan artar), işlemin iki hesabın hareketlerinde görünmesi, bakiye fazlası transferin reddedilmesi (bilinen hata) |
+| Fatura Ödeme | Başarılı ödeme sonrası bakiye ve hesap hareketi doğrulama, zorunlu alanların kontrolü (Scenario Outline), hesap numaralarının eşleşmemesi |
 
 ## Bilinen Hatalar
 
@@ -130,7 +133,7 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 
 - [x] **Aşama 1** — BDD altyapısı (playwright-bdd), Page Object Model, kayıt ve giriş senaryoları, CI
 - [x] **Aşama 2** — Yeni hesap açma (Scenario Outline), hesap özeti ve bakiye tutarlılığı, ortam hazırlığı (setup project)
-- [ ] **Aşama 3** — Hesaplar arası para transferi ve iki hesapta bakiye doğrulama, fatura ödeme
+- [x] **Aşama 3** — Hesaplar arası para transferi ve iki hesapta bakiye doğrulama, fatura ödeme, bilinen hata yönetimi (`@fail`), rate limit'e karşı dayanıklılık, CI'da izole test ortamı (Docker)
 - [ ] **Aşama 4** — Kredi başvurusu (farklı tutar ve sonuçlarla), işlem arama
 - [ ] **Aşama 5** — API testleri, API ile hızlı test verisi hazırlama (hibrit test)
 - [ ] **Aşama 6** — Etiketler (@smoke, @regression), çoklu tarayıcı, sonuçların raporlanması

@@ -5,6 +5,7 @@ import { AccountsOverviewPage } from '../pages/AccountsOverviewPage';
 import { OpenAccountPage } from '../pages/OpenAccountPage';
 import { AccountDetailsPage } from '../pages/AccountDetailsPage';
 import { TransferPage } from '../pages/TransferPage';
+import { BillPayPage } from '../pages/BillPayPage';
 import { type Customer } from '../utils/testData';
 
 // Senaryo boyunca adımlar arasında taşınan veri
@@ -23,6 +24,7 @@ type Fixtures = {
   openAccountPage: OpenAccountPage;
   accountDetailsPage: AccountDetailsPage;
   transferPage: TransferPage;
+  billPayPage: BillPayPage;
   ctx: ScenarioContext;
   requestGuard: void;
 };
@@ -46,6 +48,9 @@ export const test = base.extend<Fixtures>({
   },
   transferPage: async ({ page }, use) => {
     await use(new TransferPage(page));
+  },
+  billPayPage: async ({ page }, use) => {
+    await use(new BillPayPage(page));
   },
   ctx: async ({}, use) => {
     await use({ balancesBefore: {} });
