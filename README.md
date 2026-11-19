@@ -14,6 +14,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 - Yeni hesap (Checking / Savings) açılabiliyor ve doğru tipte oluşuyor mu? → **Veri odaklı test (Scenario Outline)**
 - Hesap özetindeki toplam bakiye, hesapların toplamına eşit mi? → **Finansal tutarlılık**
 - Yeni hesap açıldığında müşterinin toplam varlığı değişmeden kalıyor mu? → **İş kuralı doğrulaması**
+- Kredi başvurusu, onay sınırının tam üstünde ve hemen altında doğru kararı veriyor mu? → **Sınır değer analizi**
 - Paylaşılan test ortamı yanlış ayarlandığında testler bunu fark ediyor mu? → **Ortam yönetimi**
 
 ## Teknolojiler
@@ -35,10 +36,14 @@ parabank-playwright/
 │   ├── login.feature
 │   ├── register.feature
 │   ├── open-account.feature
-│   └── accounts-overview.feature
+│   ├── accounts-overview.feature
+│   ├── transfer.feature
+│   ├── bill-pay.feature
+│   └── request-loan.feature
 ├── steps/                      # Step tanımları: her adım NASIL çalışıyor
 │   ├── fixtures.ts             # Page Object'leri ve senaryo verisini step'lere verir
 │   ├── common.steps.ts         # Birden fazla feature'ın kullandığı ortak adımlar
+│   ├── balance.steps.ts        # Para hareketi olan feature'ların ortak bakiye adımları
 │   └── *.steps.ts
 ├── pages/                      # Page Object Model: locator'lar ve sayfa işlemleri
 ├── setup/
@@ -62,6 +67,8 @@ parabank-playwright/
 ParaBank paylaşılan bir demo ortam ve admin ayarlarını herkes değiştirebiliyor. Bir gün login testi beklenen "hatalı şifre" mesajı yerine "internal error" ile kırıldı. Kök neden analizinde, başka bir kullanıcının **Data Access Mode** ayarını varsayılan değer olan JDBC'den REST'e çevirdiği görüldü.
 
 Testi gevşetmek yerine Playwright'ın **setup project** özelliğiyle bir hazırlık adımı eklendi: Testlerden önce ayar kontrol ediliyor, gerekirse varsayılan değere döndürülüyor. BDD testleri bu adıma bağımlı olduğu için yanlış ayarlanmış bir ortamda hiç çalışmıyor.
+
+Kredi senaryoları eklenince aynı risk bu kez iş kuralında ortaya çıktı: Kredi kararını veren kural ve onay eşiği de admin sayfasından değiştirilebiliyor. Bu ayarlar değişirse aynı başvuru bir gün onaylanıp ertesi gün reddedilir; test kırılır ama uygulamada hata yoktur. Hazırlık adımı artık testlerin dayandığı tüm ayarları (data access mode, yeni müşterinin başlangıç bakiyesi, kredi sağlayıcı, karar kuralı ve eşik) kontrol ediyor ve düzelttiği ayarları rapora not olarak ekliyor. Kredi senaryoları da başlangıç bakiyesi varsayımını Background'da açıkça doğruluyor.
 
 ### Rate limit (istek sınırlama)
 
@@ -111,13 +118,14 @@ BASE_URL=http://localhost:8080/parabank/ npm test
 
 | Özellik | Senaryolar |
 |---|---|
-| Ortam hazırlığı | Data Access Mode'un varsayılan (JDBC) değerde olduğunu doğrulama |
+| Ortam hazırlığı | Testlerin dayandığı admin ayarlarının (data access mode, başlangıç bakiyesi, kredi ayarları) varsayılan değerde olduğunu doğrulama |
 | Müşteri Kaydı | Başarılı kayıt, şifreler eşleşmediğinde kaydın engellenmesi |
 | Müşteri Girişi | Geçerli giriş, hatalı şifre, boş alanlar |
 | Yeni Hesap Açma | CHECKING ve SAVINGS hesap açma (Scenario Outline), hesap detayında tip doğrulama |
 | Hesap Özeti | Yeni hesabın listede görünmesi, toplam bakiyenin hesapların toplamına eşit olması, hesap açılınca toplam varlığın değişmemesi |
 | Para Transferi | İki hesapta da bakiye doğrulama (gönderen azalır, alan artar), işlemin iki hesabın hareketlerinde görünmesi, bakiye fazlası transferin reddedilmesi (bilinen hata) |
 | Fatura Ödeme | Başarılı ödeme sonrası bakiye ve hesap hareketi doğrulama, zorunlu alanların kontrolü (Scenario Outline), hesap numaralarının eşleşmemesi |
+| Kredi Başvurusu | Farklı tutar ve peşinatlarla onay/ret kararı (Scenario Outline, %20 sınırının iki yanı), onaylanan kredide LOAN hesabının açılması ve peşinatın çekilmesi, boş tutar kontrolü (bilinen hata) |
 
 ## Bilinen Hatalar
 
@@ -128,6 +136,7 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 | Hata | Beklenen | Gerçekleşen | Senaryo |
 |---|---|---|---|
 | Transferde bakiye kontrolü yok | Bakiyeyi aşan transfer reddedilmeli | Transfer gerçekleşiyor, hesap eksiye düşüyor | `transfer.feature` → *Transfer exceeding the available balance should be rejected* |
+| Kredi başvurusunda boş tutar kontrolü yok | "The loan amount cannot be empty." mesajı gösterilmeli (mesaj uygulamada tanımlı) | Genel "An internal error has occurred" hatası gösteriliyor | `request-loan.feature` → *Loan request without an amount should show a validation message* |
 
 ## Yol Haritası
 

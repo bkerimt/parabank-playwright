@@ -6,6 +6,7 @@ import { OpenAccountPage } from '../pages/OpenAccountPage';
 import { AccountDetailsPage } from '../pages/AccountDetailsPage';
 import { TransferPage } from '../pages/TransferPage';
 import { BillPayPage } from '../pages/BillPayPage';
+import { RequestLoanPage } from '../pages/RequestLoanPage';
 import { type Customer } from '../utils/testData';
 
 // Senaryo boyunca adımlar arasında taşınan veri
@@ -13,6 +14,7 @@ export type ScenarioContext = {
   customer?: Customer;
   originalAccountId?: string; // Kayıtta otomatik açılan ilk hesap
   newAccountId?: string; // Senaryo içinde açılan yeni hesap
+  loanAccountId?: string; // Onaylanan krediyle açılan kredi hesabı
   totalBalanceBefore?: number;
   balancesBefore: Record<string, number>; // İşlemden önceki bakiyeler (hesap no -> bakiye)
 };
@@ -25,6 +27,7 @@ type Fixtures = {
   accountDetailsPage: AccountDetailsPage;
   transferPage: TransferPage;
   billPayPage: BillPayPage;
+  requestLoanPage: RequestLoanPage;
   ctx: ScenarioContext;
   requestGuard: void;
 };
@@ -51,6 +54,9 @@ export const test = base.extend<Fixtures>({
   },
   billPayPage: async ({ page }, use) => {
     await use(new BillPayPage(page));
+  },
+  requestLoanPage: async ({ page }, use) => {
+    await use(new RequestLoanPage(page));
   },
   ctx: async ({}, use) => {
     await use({ balancesBefore: {} });
@@ -86,9 +92,14 @@ export const test = base.extend<Fixtures>({
 
 export const { Given, When, Then } = createBdd(test);
 
-// Feature dosyasındaki "original" / "new" kelimesini gerçek hesap numarasına çevirir
+// Feature dosyasındaki "original" / "new" / "loan" kelimesini gerçek hesap numarasına çevirir
 export function accountIdFor(role: string, ctx: ScenarioContext): string {
-  const accountId = role === 'original' ? ctx.originalAccountId : role === 'new' ? ctx.newAccountId : undefined;
+  const accountIds: Record<string, string | undefined> = {
+    original: ctx.originalAccountId,
+    new: ctx.newAccountId,
+    loan: ctx.loanAccountId,
+  };
+  const accountId = accountIds[role];
   if (!accountId) {
     throw new Error(`"${role}" hesabı bu senaryoda henüz oluşturulmadı`);
   }

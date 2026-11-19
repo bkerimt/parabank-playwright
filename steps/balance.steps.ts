@@ -1,7 +1,17 @@
 import { expect } from '@playwright/test';
 import { Given, Then, accountIdFor } from './fixtures';
 
-// Para hareketi olan tüm feature'ların (transfer, fatura ödeme) kullandığı bakiye ve hareket adımları
+// Para hareketi olan tüm feature'ların (transfer, fatura ödeme, kredi) kullandığı bakiye ve hareket adımları
+
+Given('the customer has noted the balance of the original account', async ({ overviewPage, accountDetailsPage, ctx }) => {
+  // Yeni kayıt olan müşterinin tek hesabı var: kayıtta otomatik açılan hesap
+  await overviewPage.goto();
+  const [originalAccountId] = await overviewPage.getAccountIds();
+  ctx.originalAccountId = originalAccountId;
+
+  await accountDetailsPage.goto(originalAccountId);
+  ctx.balancesBefore[originalAccountId] = await accountDetailsPage.getBalance();
+});
 
 Given(
   'the customer has noted the balances of the original and new accounts',

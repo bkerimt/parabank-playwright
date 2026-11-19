@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { Given, When, Then, accountIdFor } from './fixtures';
+import { When, Then, accountIdFor } from './fixtures';
 import { createBillPayment } from '../utils/testData';
 import { type BillPayField } from '../pages/BillPayPage';
 
@@ -11,16 +11,6 @@ const fieldNames: Record<string, BillPayField> = {
   'account number': 'accountNumber',
   amount: 'amount',
 };
-
-Given('the customer has noted the balance of the original account', async ({ overviewPage, accountDetailsPage, ctx }) => {
-  // Yeni kayıt olan müşterinin tek hesabı var: kayıtta otomatik açılan hesap
-  await overviewPage.goto();
-  const [originalAccountId] = await overviewPage.getAccountIds();
-  ctx.originalAccountId = originalAccountId;
-
-  await accountDetailsPage.goto(originalAccountId);
-  ctx.balancesBefore[originalAccountId] = await accountDetailsPage.getBalance();
-});
 
 When(
   'the customer pays a bill of ${float} to {string}',
