@@ -33,4 +33,15 @@ export class AccountDetailsPage {
   transactionRow(description: string): Locator {
     return this.transactionRows.filter({ hasText: description });
   }
+
+  // İşlem numarası ekranda yazmıyor; açıklamadaki linkte duruyor (transaction.htm?id=14476)
+  async getTransactionId(description: string, amount: string): Promise<string> {
+    const link = this.transactionRow(description).filter({ hasText: amount }).locator('a');
+    const href = await link.getAttribute('href');
+    const transactionId = href?.match(/id=(\d+)/)?.[1];
+    if (!transactionId) {
+      throw new Error(`"${description}" (${amount}) işleminin numarası bulunamadı`);
+    }
+    return transactionId;
+  }
 }

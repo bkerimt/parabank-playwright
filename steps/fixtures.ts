@@ -7,6 +7,7 @@ import { AccountDetailsPage } from '../pages/AccountDetailsPage';
 import { TransferPage } from '../pages/TransferPage';
 import { BillPayPage } from '../pages/BillPayPage';
 import { RequestLoanPage } from '../pages/RequestLoanPage';
+import { FindTransactionsPage } from '../pages/FindTransactionsPage';
 import { type Customer } from '../utils/testData';
 
 // Senaryo boyunca adımlar arasında taşınan veri
@@ -15,6 +16,7 @@ export type ScenarioContext = {
   originalAccountId?: string; // Kayıtta otomatik açılan ilk hesap
   newAccountId?: string; // Senaryo içinde açılan yeni hesap
   loanAccountId?: string; // Onaylanan krediyle açılan kredi hesabı
+  transactionId?: string; // Aramada kullanılmak üzere not edilen işlem numarası
   totalBalanceBefore?: number;
   balancesBefore: Record<string, number>; // İşlemden önceki bakiyeler (hesap no -> bakiye)
 };
@@ -28,6 +30,7 @@ type Fixtures = {
   transferPage: TransferPage;
   billPayPage: BillPayPage;
   requestLoanPage: RequestLoanPage;
+  findTransactionsPage: FindTransactionsPage;
   ctx: ScenarioContext;
   requestGuard: void;
 };
@@ -57,6 +60,9 @@ export const test = base.extend<Fixtures>({
   },
   requestLoanPage: async ({ page }, use) => {
     await use(new RequestLoanPage(page));
+  },
+  findTransactionsPage: async ({ page }, use) => {
+    await use(new FindTransactionsPage(page));
   },
   ctx: async ({}, use) => {
     await use({ balancesBefore: {} });

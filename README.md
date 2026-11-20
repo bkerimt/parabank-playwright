@@ -15,6 +15,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 - Hesap özetindeki toplam bakiye, hesapların toplamına eşit mi? → **Finansal tutarlılık**
 - Yeni hesap açıldığında müşterinin toplam varlığı değişmeden kalıyor mu? → **İş kuralı doğrulaması**
 - Kredi başvurusu, onay sınırının tam üstünde ve hemen altında doğru kararı veriyor mu? → **Sınır değer analizi**
+- Bir müşteri başka bir müşterinin işlemlerini görebiliyor mu? → **Yetkilendirme (güvenlik) kontrolü**
 - Paylaşılan test ortamı yanlış ayarlandığında testler bunu fark ediyor mu? → **Ortam yönetimi**
 
 ## Teknolojiler
@@ -39,7 +40,8 @@ parabank-playwright/
 │   ├── accounts-overview.feature
 │   ├── transfer.feature
 │   ├── bill-pay.feature
-│   └── request-loan.feature
+│   ├── request-loan.feature
+│   └── find-transactions.feature
 ├── steps/                      # Step tanımları: her adım NASIL çalışıyor
 │   ├── fixtures.ts             # Page Object'leri ve senaryo verisini step'lere verir
 │   ├── common.steps.ts         # Birden fazla feature'ın kullandığı ortak adımlar
@@ -60,6 +62,7 @@ parabank-playwright/
 - **Bağımsız testler:** Her senaryo kendi benzersiz müşterisini oluşturur. Testler birbirinin verisine veya paylaşılan veritabanındaki hazır kullanıcılara bağımlı değildir.
 - **Fixture'lar:** Page Object'ler ve senaryo içi veri, Playwright fixture'ları ile step'lere enjekte edilir. Paralel çalışmada testler birbirinin verisini bozmaz.
 - **Dayanıklı locator'lar:** ParaBank, fatura ödeme formundaki telefon alanının `id` ve `class` değerlerini her sayfa açılışında rastgele üretiyor. Bu tür alanlar değişmeyen `name` niteliğiyle bulunuyor.
+- **Saat dilimine dayanıklı tarih araması:** İşlemler "bugün" yerine dünden yarına uzanan bir tarih aralığında aranıyor. Testi çalıştıran bilgisayar ile sunucu farklı saat dilimlerindeyse (ör. gece yarısına yakın saatlerde) "bugün" iki tarafta farklı gün olabilir; aralık bu farkı tolere ediyor.
 - **Asenkron işlemleri beklemek:** Transfer, hesap açma ve fatura ödeme istekleri arka planda (AJAX) gönderiliyor. Page Object'ler, işlem sonucu ekranda görünmeden bir sonraki adıma geçmiyor; böylece yarıda kalan istekler yüzünden oluşacak yanıltıcı sonuçlar önleniyor.
 
 ### Ortam hazırlığı
@@ -126,6 +129,7 @@ BASE_URL=http://localhost:8080/parabank/ npm test
 | Para Transferi | İki hesapta da bakiye doğrulama (gönderen azalır, alan artar), işlemin iki hesabın hareketlerinde görünmesi, bakiye fazlası transferin reddedilmesi (bilinen hata) |
 | Fatura Ödeme | Başarılı ödeme sonrası bakiye ve hesap hareketi doğrulama, zorunlu alanların kontrolü (Scenario Outline), hesap numaralarının eşleşmemesi |
 | Kredi Başvurusu | Farklı tutar ve peşinatlarla onay/ret kararı (Scenario Outline, %20 sınırının iki yanı), onaylanan kredide LOAN hesabının açılması ve peşinatın çekilmesi, boş tutar kontrolü (bilinen hata) |
+| İşlem Arama | Tutara göre arama (gönderen ve alan hesapta, Scenario Outline), tarih aralığıyla arama, sonuç çıkmayan arama, işlem numarasıyla arama, başka müşterinin işlemine erişim (bilinen hata), geçersiz arama değerleri (Scenario Outline) |
 
 ## Bilinen Hatalar
 
@@ -137,13 +141,14 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 |---|---|---|---|
 | Transferde bakiye kontrolü yok | Bakiyeyi aşan transfer reddedilmeli | Transfer gerçekleşiyor, hesap eksiye düşüyor | `transfer.feature` → *Transfer exceeding the available balance should be rejected* |
 | Kredi başvurusunda boş tutar kontrolü yok | "The loan amount cannot be empty." mesajı gösterilmeli (mesaj uygulamada tanımlı) | Genel "An internal error has occurred" hatası gösteriliyor | `request-loan.feature` → *Loan request without an amount should show a validation message* |
+| İşlem numarasıyla aramada yetki kontrolü yok (güvenlik) | Müşteri sadece kendi işlemlerini görebilmeli | Başka bir müşteri, numarasını bildiği her işlemin tutarını ve açıklamasını görebiliyor | `find-transactions.feature` → *Customer cannot see another customer's transaction by its ID* |
 
 ## Yol Haritası
 
 - [x] **Aşama 1** — BDD altyapısı (playwright-bdd), Page Object Model, kayıt ve giriş senaryoları, CI
 - [x] **Aşama 2** — Yeni hesap açma (Scenario Outline), hesap özeti ve bakiye tutarlılığı, ortam hazırlığı (setup project)
 - [x] **Aşama 3** — Hesaplar arası para transferi ve iki hesapta bakiye doğrulama, fatura ödeme, bilinen hata yönetimi (`@fail`), rate limit'e karşı dayanıklılık, CI'da izole test ortamı (Docker)
-- [ ] **Aşama 4** — Kredi başvurusu (farklı tutar ve sonuçlarla), işlem arama
+- [x] **Aşama 4** — Kredi başvurusu (farklı tutar ve sonuçlarla, sınır değer analizi), işlem arama, yetkilendirme açığının tespiti, ortam hazırlığının kredi ayarlarını da kapsaması
 - [ ] **Aşama 5** — API testleri, API ile hızlı test verisi hazırlama (hibrit test)
 - [ ] **Aşama 6** — Etiketler (@smoke, @regression), çoklu tarayıcı, sonuçların raporlanması
 
