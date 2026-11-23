@@ -2,7 +2,7 @@
 
 ![Playwright Tests](https://github.com/bkerimt/parabank-playwright/actions/workflows/playwright.yml/badge.svg)
 
-[ParaBank](https://parabank.parasoft.com) demo bankacılık uygulaması için **Playwright + TypeScript** ile yazılmış, **BDD (Given / When / Then)** yaklaşımıyla kurgulanmış uçtan uca test otomasyonu projesi.
+[ParaBank](https://parabank.parasoft.com) demo bankacılık uygulaması için **Playwright + TypeScript** ile yazılmış, **BDD (Given / When / Then)** yaklaşımıyla kurgulanmış uçtan uca **arayüz ve API** test otomasyonu projesi.
 
 > ⚠️ **Not:** ParaBank, Parasoft'un test pratiği için herkese açık sunduğu bir demo sitedir. Gerçek bir banka ya da gerçek müşteri verisi kullanılmaz.
 
@@ -16,6 +16,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 - Yeni hesap açıldığında müşterinin toplam varlığı değişmeden kalıyor mu? → **İş kuralı doğrulaması**
 - Kredi başvurusu, onay sınırının tam üstünde ve hemen altında doğru kararı veriyor mu? → **Sınır değer analizi**
 - Bir müşteri başka bir müşterinin işlemlerini görebiliyor mu? → **Yetkilendirme (güvenlik) kontrolü**
+- REST API doğru veriyi dönüyor ve hatalı isteklere doğru cevap veriyor mu? Yetkisiz erişimi engelliyor mu? → **API testi**
 - Paylaşılan test ortamı yanlış ayarlandığında testler bunu fark ediyor mu? → **Ortam yönetimi**
 
 ## Teknolojiler
@@ -23,6 +24,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 | Araç | Kullanım |
 |---|---|
 | [Playwright](https://playwright.dev) | Tarayıcı otomasyonu ve test koşucusu (runner) |
+| Playwright APIRequestContext | Tarayıcı açmadan REST API testi |
 | TypeScript | Test kodu dili |
 | [playwright-bdd](https://github.com/vitalets/playwright-bdd) | Gherkin senaryolarını Playwright runner üzerinde çalıştırma |
 | Page Object Model | Sayfa locator'ları ve işlemlerinin testlerden ayrılması |
@@ -41,13 +43,18 @@ parabank-playwright/
 │   ├── transfer.feature
 │   ├── bill-pay.feature
 │   ├── request-loan.feature
-│   └── find-transactions.feature
+│   ├── find-transactions.feature
+│   └── api/                    # API senaryoları
+│       └── customer-accounts.feature
 ├── steps/                      # Step tanımları: her adım NASIL çalışıyor
 │   ├── fixtures.ts             # Page Object'leri ve senaryo verisini step'lere verir
 │   ├── common.steps.ts         # Birden fazla feature'ın kullandığı ortak adımlar
 │   ├── balance.steps.ts        # Para hareketi olan feature'ların ortak bakiye adımları
-│   └── *.steps.ts
+│   ├── *.steps.ts
+│   └── api/                    # API step'leri ve fixture'ları (tarayıcı açmaz)
 ├── pages/                      # Page Object Model: locator'lar ve sayfa işlemleri
+├── api/
+│   └── ParaBankApiClient.ts    # REST servisi istemcisi (Page Object'lerin API karşılığı)
 ├── setup/
 │   └── environment.setup.ts    # Testlerden önce ortamı doğrulayan hazırlık adımı
 ├── utils/                      # Test verisi üretimi, tutar dönüştürme
@@ -63,6 +70,7 @@ parabank-playwright/
 - **Fixture'lar:** Page Object'ler ve senaryo içi veri, Playwright fixture'ları ile step'lere enjekte edilir. Paralel çalışmada testler birbirinin verisini bozmaz.
 - **Dayanıklı locator'lar:** ParaBank, fatura ödeme formundaki telefon alanının `id` ve `class` değerlerini her sayfa açılışında rastgele üretiyor. Bu tür alanlar değişmeyen `name` niteliğiyle bulunuyor.
 - **Saat dilimine dayanıklı tarih araması:** İşlemler "bugün" yerine dünden yarına uzanan bir tarih aralığında aranıyor. Testi çalıştıran bilgisayar ile sunucu farklı saat dilimlerindeyse (ör. gece yarısına yakın saatlerde) "bugün" iki tarafta farklı gün olabilir; aralık bu farkı tolere ediyor.
+- **API testleri ayrı katmanda:** API senaryoları da Gherkin ile yazılıyor ama kendi step'leri ve fixture'ları var (`steps/api/`). Arayüz fixture'ları her test için tarayıcı sayfası açtığından API testleri bunlardan ayrı tutuldu; API testleri hiç tarayıcı açmıyor. İstekler `ParaBankApiClient` üzerinden gidiyor: Step'ler adres ayrıntısını bilmiyor, Page Object'lerde olduğu gibi iş diliyle konuşuyor.
 - **Asenkron işlemleri beklemek:** Transfer, hesap açma ve fatura ödeme istekleri arka planda (AJAX) gönderiliyor. Page Object'ler, işlem sonucu ekranda görünmeden bir sonraki adıma geçmiyor; böylece yarıda kalan istekler yüzünden oluşacak yanıltıcı sonuçlar önleniyor.
 
 ### Ortam hazırlığı
@@ -78,7 +86,7 @@ Kredi senaryoları eklenince aynı risk bu kez iş kuralında ortaya çıktı: K
 Testler bir gün yerelde geçerken CI'da zaman aşımıyla kırıldı. Log'da "kayıt formu bulunamadı" görünüyordu, ama CI'ın yüklediği rapordaki ekran görüntüsü asıl sebebi gösterdi: **Cloudflare Error 1015 – You are being rate limited.** ParaBank'ın önündeki Cloudflare, kısa sürede çok istek gelen IP adreslerini geçici olarak engelliyor. GitHub Actions sunucuları paylaşılan IP adresleri kullandığı için bu risk CI'da daha yüksek.
 
 Yapılan iyileştirmeler:
-- **Hızlı ve anlaşılır hata:** Sayfa açılırken HTTP 429 gelirse test 60 saniye beklemek yerine hemen, sebebini açıkça söyleyen bir mesajla duruyor (`utils/navigation.ts`). Sayfa dışı isteklerdeki 429'lar da rapora not olarak ekleniyor.
+- **Hızlı ve anlaşılır hata:** Sayfa açılırken ya da API isteğinde HTTP 429 gelirse test 60 saniye beklemek yerine hemen, sebebini açıkça söyleyen bir mesajla duruyor (`utils/navigation.ts`). Sayfa dışı isteklerdeki 429'lar da rapora not olarak ekleniyor.
 - **Daha az istek:** Resim, font ve medya dosyaları indirilmiyor; testlerin doğruladığı hiçbir şey bunlara bağlı değil (`steps/fixtures.ts` → `requestGuard`). Yan etkisi olarak suite süresi aynı makinede **1.4 dakikadan 54 saniyeye** düştü.
 - **Daha az tekrar:** CI'da retry sayısı 2'den 1'e indirildi; engellenmiş bir IP'den hemen tekrar denemek engeli uzatıyor.
 
@@ -104,6 +112,7 @@ Gereksinim: [Node.js](https://nodejs.org) (LTS sürümü)
 npm install                      # Bağımlılıkları kur
 npx playwright install chromium  # Tarayıcıyı indir
 npm test                         # Feature'ları teste dönüştür ve çalıştır
+npm run test:api                 # Sadece API testlerini çalıştır
 npm run report                   # HTML raporunu aç
 ```
 
@@ -130,6 +139,7 @@ BASE_URL=http://localhost:8080/parabank/ npm test
 | Fatura Ödeme | Başarılı ödeme sonrası bakiye ve hesap hareketi doğrulama, zorunlu alanların kontrolü (Scenario Outline), hesap numaralarının eşleşmemesi |
 | Kredi Başvurusu | Farklı tutar ve peşinatlarla onay/ret kararı (Scenario Outline, %20 sınırının iki yanı), onaylanan kredide LOAN hesabının açılması ve peşinatın çekilmesi, boş tutar kontrolü (bilinen hata) |
 | İşlem Arama | Tutara göre arama (gönderen ve alan hesapta, Scenario Outline), tarih aralığıyla arama, sonuç çıkmayan arama, işlem numarasıyla arama, başka müşterinin işlemine erişim (bilinen hata), geçersiz arama değerleri (Scenario Outline) |
+| API — Müşteri ve Hesap | API ile giriş ve müşteri bilgilerinin kayıttaki bilgilerle eşleşmesi, hatalı şifre, müşteri ve hesap detayı, yeni müşterinin tek CHECKING hesabı ve başlangıç bakiyesi, olmayan hesap, kimlik doğrulamasız erişim (bilinen hata) |
 
 ## Bilinen Hatalar
 
@@ -142,6 +152,7 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 | Transferde bakiye kontrolü yok | Bakiyeyi aşan transfer reddedilmeli | Transfer gerçekleşiyor, hesap eksiye düşüyor | `transfer.feature` → *Transfer exceeding the available balance should be rejected* |
 | Kredi başvurusunda boş tutar kontrolü yok | "The loan amount cannot be empty." mesajı gösterilmeli (mesaj uygulamada tanımlı) | Genel "An internal error has occurred" hatası gösteriliyor | `request-loan.feature` → *Loan request without an amount should show a validation message* |
 | İşlem numarasıyla aramada yetki kontrolü yok (güvenlik) | Müşteri sadece kendi işlemlerini görebilmeli | Başka bir müşteri, numarasını bildiği her işlemin tutarını ve açıklamasını görebiliyor | `find-transactions.feature` → *Customer cannot see another customer's transaction by its ID* |
+| REST API kimlik doğrulaması istemiyor (güvenlik) | Giriş yapmamış bir istemci müşteri verisine erişememeli (HTTP 401) | Müşteri numarasını bilen herkes, giriş yapmadan hesapları ve bakiyeleri okuyabiliyor | `api/customer-accounts.feature` → *Customer accounts cannot be read without authentication* |
 
 ## Yol Haritası
 

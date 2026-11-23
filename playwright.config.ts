@@ -1,10 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 import { defineBddConfig } from 'playwright-bdd';
 
-// Feature dosyalarını ve step'leri Playwright testlerine dönüştürür
-const bddTestDir = defineBddConfig({
-  features: 'features/**/*.feature',
-  steps: 'steps/**/*.ts',
+// Feature dosyalarını ve step'leri Playwright testlerine dönüştürür.
+// Arayüz ve API senaryoları ayrı tutuluyor: Her biri kendi step'lerini ve fixture'larını kullanıyor.
+const uiTestDir = defineBddConfig({
+  outputDir: '.features-gen/ui',
+  features: 'features/*.feature',
+  steps: 'steps/*.ts',
+});
+
+const apiTestDir = defineBddConfig({
+  outputDir: '.features-gen/api',
+  features: 'features/api/*.feature',
+  steps: 'steps/api/*.ts',
 });
 
 // Lokalde bilgisayardaki Chrome, CI'da Playwright'ın Chromium'u
@@ -38,12 +46,18 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
       use: browser,
     },
-    // 2) BDD testleri: setup başarılı olmadan başlamaz
+    // 2) Arayüz (BDD) testleri: setup başarılı olmadan başlamaz
     {
       name: 'chromium',
-      testDir: bddTestDir,
+      testDir: uiTestDir,
       dependencies: ['setup'],
       use: browser,
+    },
+    // 3) API (BDD) testleri: tarayıcı açmaz, doğrudan REST servisine istek atar
+    {
+      name: 'api',
+      testDir: apiTestDir,
+      dependencies: ['setup'],
     },
   ],
 });

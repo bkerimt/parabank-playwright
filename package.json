@@ -5,6 +5,7 @@
   "scripts": {
     "test": "bddgen && playwright test",
     "test:headed": "bddgen && playwright test --headed",
+    "test:api": "bddgen && playwright test --project=api",
     "report": "playwright show-report"
   },
   "devDependencies": {
