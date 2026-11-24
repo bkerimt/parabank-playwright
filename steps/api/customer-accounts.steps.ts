@@ -13,6 +13,10 @@ Given('a new customer has been registered', async ({ api, ctx }) => {
   expect(login.status(), 'Yeni müşteri API ile giriş yapabilmeli').toBe(200);
   ctx.customer = customer;
   ctx.customerId = (await login.json()).id;
+
+  // Kayıtla birlikte açılan ilk hesabın numarası (para işlemi senaryoları bu hesabı kullanıyor)
+  const accounts = await (await api.getAccounts(ctx.customerId!)).json();
+  ctx.originalAccountId = accounts[0].id;
 });
 
 // ---------- İstekler ----------
@@ -34,8 +38,7 @@ When("the client requests the customer's accounts", async ({ api, ctx }) => {
 });
 
 When("the client requests the details of the customer's first account", async ({ api, ctx }) => {
-  const accounts = await (await api.getAccounts(ctx.customerId!)).json();
-  ctx.response = await api.getAccount(accounts[0].id);
+  ctx.response = await api.getAccount(ctx.originalAccountId!);
 });
 
 When('the client requests the details of account {int}', async ({ api, ctx }, accountId: number) => {

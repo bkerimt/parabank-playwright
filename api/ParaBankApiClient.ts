@@ -2,6 +2,10 @@ import { type APIRequestContext, type APIResponse } from '@playwright/test';
 import { type Customer } from '../utils/testData';
 import { throwIfRateLimited } from '../utils/navigation';
 
+// ParaBank hesap tipini sayıyla bekliyor: 0 = CHECKING, 1 = SAVINGS
+const accountTypeCodes = { CHECKING: 0, SAVINGS: 1 } as const;
+export type AccountType = keyof typeof accountTypeCodes;
+
 /*
  * ParaBank'ın REST servisi (services/bank/...) için istemci.
  * Page Object'lerin API karşılığı: Adımlar adres ve parametre ayrıntısını bilmez,
@@ -16,6 +20,16 @@ export class ParaBankApiClient {
   // ParaBank varsayılan olarak XML döner; JSON istediğimizi Accept başlığıyla söylüyoruz
   private async get(path: string): Promise<APIResponse> {
     const response = await this.request.get(`services/bank/${path}`, {
+      headers: { Accept: 'application/json' },
+    });
+    throwIfRateLimited(response.status(), path);
+    return response;
+  }
+
+  // Para işlemleri POST ile, parametreler adresin sorgu kısmında (?accountId=..&amount=..) gönderiliyor
+  private async post(path: string, params: Record<string, string | number>): Promise<APIResponse> {
+    const response = await this.request.post(`services/bank/${path}`, {
+      params,
       headers: { Accept: 'application/json' },
     });
     throwIfRateLimited(response.status(), path);
@@ -37,6 +51,41 @@ export class ParaBankApiClient {
 
   getAccount(accountId: number): Promise<APIResponse> {
     return this.get(`accounts/${accountId}`);
+  }
+
+  getTransactions(accountId: number): Promise<APIResponse> {
+    return this.get(`accounts/${accountId}/transactions`);
+  }
+
+  // Doğrulama adımları için kısa yol: hesabın güncel bakiyesini sayı olarak döner
+  async getBalance(accountId: number): Promise<number> {
+    const response = await this.getAccount(accountId);
+    if (!response.ok()) {
+      throw new Error(`#${accountId} hesabının bakiyesi okunamadı (HTTP ${response.status()}): ${await response.text()}`);
+    }
+    return (await response.json()).balance;
+  }
+
+  // Yeni hesap açar; ParaBank açılış tutarını (minimum bakiye) kaynak hesaptan aktarır
+  createAccount(customerId: number, type: AccountType, fromAccountId: number): Promise<APIResponse> {
+    return this.post('createAccount', {
+      customerId,
+      newAccountType: accountTypeCodes[type],
+      fromAccountId,
+    });
+  }
+
+  // Tutarlar kuruş hassasiyetinde, metin olarak gönderiliyor (ör. 50 → "50.00")
+  deposit(accountId: number, amount: number): Promise<APIResponse> {
+    return this.post('deposit', { accountId, amount: amount.toFixed(2) });
+  }
+
+  withdraw(accountId: number, amount: number): Promise<APIResponse> {
+    return this.post('withdraw', { accountId, amount: amount.toFixed(2) });
+  }
+
+  transfer(fromAccountId: number, toAccountId: number, amount: number): Promise<APIResponse> {
+    return this.post('transfer', { fromAccountId, toAccountId, amount: amount.toFixed(2) });
   }
 
   /*

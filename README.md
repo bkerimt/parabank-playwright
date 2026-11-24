@@ -17,6 +17,7 @@ Bankacılık uygulamalarında bir işlemin "başarılı" mesajı vermesi yetmez;
 - Kredi başvurusu, onay sınırının tam üstünde ve hemen altında doğru kararı veriyor mu? → **Sınır değer analizi**
 - Bir müşteri başka bir müşterinin işlemlerini görebiliyor mu? → **Yetkilendirme (güvenlik) kontrolü**
 - REST API doğru veriyi dönüyor ve hatalı isteklere doğru cevap veriyor mu? Yetkisiz erişimi engelliyor mu? → **API testi**
+- Yarıda kalan bir transfer parayı kaybettiriyor mu? Arayüzdeki eksik kontroller sunucu tarafında da eksik mi? → **Atomiklik ve sunucu tarafı doğrulama**
 - Paylaşılan test ortamı yanlış ayarlandığında testler bunu fark ediyor mu? → **Ortam yönetimi**
 
 ## Teknolojiler
@@ -45,7 +46,8 @@ parabank-playwright/
 │   ├── request-loan.feature
 │   ├── find-transactions.feature
 │   └── api/                    # API senaryoları
-│       └── customer-accounts.feature
+│       ├── customer-accounts.feature
+│       └── money-operations.feature
 ├── steps/                      # Step tanımları: her adım NASIL çalışıyor
 │   ├── fixtures.ts             # Page Object'leri ve senaryo verisini step'lere verir
 │   ├── common.steps.ts         # Birden fazla feature'ın kullandığı ortak adımlar
@@ -71,6 +73,7 @@ parabank-playwright/
 - **Dayanıklı locator'lar:** ParaBank, fatura ödeme formundaki telefon alanının `id` ve `class` değerlerini her sayfa açılışında rastgele üretiyor. Bu tür alanlar değişmeyen `name` niteliğiyle bulunuyor.
 - **Saat dilimine dayanıklı tarih araması:** İşlemler "bugün" yerine dünden yarına uzanan bir tarih aralığında aranıyor. Testi çalıştıran bilgisayar ile sunucu farklı saat dilimlerindeyse (ör. gece yarısına yakın saatlerde) "bugün" iki tarafta farklı gün olabilir; aralık bu farkı tolere ediyor.
 - **API testleri ayrı katmanda:** API senaryoları da Gherkin ile yazılıyor ama kendi step'leri ve fixture'ları var (`steps/api/`). Arayüz fixture'ları her test için tarayıcı sayfası açtığından API testleri bunlardan ayrı tutuldu; API testleri hiç tarayıcı açmıyor. İstekler `ParaBankApiClient` üzerinden gidiyor: Step'ler adres ayrıntısını bilmiyor, Page Object'lerde olduğu gibi iş diliyle konuşuyor.
+- **Mesaja değil, bakiyeye güvenmek:** Para işlemlerinde "başarılı" cevabı yeterli sayılmıyor. İşlemden önce ve sonra hesap bakiyesi ayrıca okunup farkın tam işlem tutarı kadar olduğu doğrulanıyor; arayüzde ekrandan, API'de ayrı bir istekle.
 - **Asenkron işlemleri beklemek:** Transfer, hesap açma ve fatura ödeme istekleri arka planda (AJAX) gönderiliyor. Page Object'ler, işlem sonucu ekranda görünmeden bir sonraki adıma geçmiyor; böylece yarıda kalan istekler yüzünden oluşacak yanıltıcı sonuçlar önleniyor.
 
 ### Ortam hazırlığı
@@ -140,6 +143,7 @@ BASE_URL=http://localhost:8080/parabank/ npm test
 | Kredi Başvurusu | Farklı tutar ve peşinatlarla onay/ret kararı (Scenario Outline, %20 sınırının iki yanı), onaylanan kredide LOAN hesabının açılması ve peşinatın çekilmesi, boş tutar kontrolü (bilinen hata) |
 | İşlem Arama | Tutara göre arama (gönderen ve alan hesapta, Scenario Outline), tarih aralığıyla arama, sonuç çıkmayan arama, işlem numarasıyla arama, başka müşterinin işlemine erişim (bilinen hata), geçersiz arama değerleri (Scenario Outline) |
 | API — Müşteri ve Hesap | API ile giriş ve müşteri bilgilerinin kayıttaki bilgilerle eşleşmesi, hatalı şifre, müşteri ve hesap detayı, yeni müşterinin tek CHECKING hesabı ve başlangıç bakiyesi, olmayan hesap, kimlik doğrulamasız erişim (bilinen hata) |
+| API — Para İşlemleri | Yeni hesap açılışında açılış tutarının ilk hesaptan aktarılması, para yatırma ve çekme (Scenario Outline; bakiye ve hesap hareketi), hesaplar arası transfer, var olmayan hesaba transferin geri alınması (atomiklik), bakiyeden fazla çekim ve negatif tutarlı transfer (bilinen hatalar) |
 
 ## Bilinen Hatalar
 
@@ -149,10 +153,11 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 
 | Hata | Beklenen | Gerçekleşen | Senaryo |
 |---|---|---|---|
-| Transferde bakiye kontrolü yok | Bakiyeyi aşan transfer reddedilmeli | Transfer gerçekleşiyor, hesap eksiye düşüyor | `transfer.feature` → *Transfer exceeding the available balance should be rejected* |
+| Bakiye kontrolü yok (arayüz ve API) | Bakiyeyi aşan transfer ve para çekme reddedilmeli | İşlem gerçekleşiyor, hesap eksiye düşüyor. Kontrol sadece arayüzde değil, sunucu tarafında da yok | `transfer.feature` → *Transfer exceeding the available balance should be rejected*, `api/money-operations.feature` → *Withdrawal exceeding the balance should be rejected* |
 | Kredi başvurusunda boş tutar kontrolü yok | "The loan amount cannot be empty." mesajı gösterilmeli (mesaj uygulamada tanımlı) | Genel "An internal error has occurred" hatası gösteriliyor | `request-loan.feature` → *Loan request without an amount should show a validation message* |
 | İşlem numarasıyla aramada yetki kontrolü yok (güvenlik) | Müşteri sadece kendi işlemlerini görebilmeli | Başka bir müşteri, numarasını bildiği her işlemin tutarını ve açıklamasını görebiliyor | `find-transactions.feature` → *Customer cannot see another customer's transaction by its ID* |
 | REST API kimlik doğrulaması istemiyor (güvenlik) | Giriş yapmamış bir istemci müşteri verisine erişememeli (HTTP 401) | Müşteri numarasını bilen herkes, giriş yapmadan hesapları ve bakiyeleri okuyabiliyor | `api/customer-accounts.feature` → *Customer accounts cannot be read without authentication* |
+| Negatif tutarlı transfer kabul ediliyor (API) | Sıfır ve negatif tutarlar reddedilmeli | Transfer gerçekleşiyor ve para ters yöne, alıcı hesaptan gönderen hesaba akıyor | `api/money-operations.feature` → *Transfer with a negative amount should be rejected* |
 
 ## Yol Haritası
 

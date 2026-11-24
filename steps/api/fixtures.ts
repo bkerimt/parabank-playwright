@@ -13,6 +13,9 @@ import { type Customer } from '../../utils/testData';
 export type ApiScenarioContext = {
   customer?: Customer;
   customerId?: number;
+  originalAccountId?: number; // Kayıtta otomatik açılan ilk hesap
+  newAccountId?: number; // Senaryo içinde API ile açılan hesap
+  balancesBefore: Record<number, number>; // İşlemden önce not edilen bakiyeler (hesap no → bakiye)
   response?: APIResponse; // Son API isteğinin cevabı; "Then" adımları bunu doğrular
 };
 
@@ -36,11 +39,24 @@ export const test = base.extend<Fixtures>({
   },
 
   ctx: async ({}, use) => {
-    await use({});
+    await use({ balancesBefore: {} });
   },
 });
 
 export const { Given, When, Then } = createBdd(test);
+
+// Feature dosyasındaki "original" / "new" kelimesini gerçek hesap numarasına çevirir
+export function accountIdFor(role: string, ctx: ApiScenarioContext): number {
+  const accountIds: Record<string, number | undefined> = {
+    original: ctx.originalAccountId,
+    new: ctx.newAccountId,
+  };
+  const accountId = accountIds[role];
+  if (accountId === undefined) {
+    throw new Error(`"${role}" hesabı bu senaryoda henüz oluşturulmadı`);
+  }
+  return accountId;
+}
 
 // Son cevabı döner; henüz istek atılmadıysa anlaşılır bir hata verir
 export function lastResponse(ctx: ApiScenarioContext): APIResponse {
