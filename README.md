@@ -73,7 +73,8 @@ parabank-playwright/
 - **Dayanıklı locator'lar:** ParaBank, fatura ödeme formundaki telefon alanının `id` ve `class` değerlerini her sayfa açılışında rastgele üretiyor. Bu tür alanlar değişmeyen `name` niteliğiyle bulunuyor.
 - **Saat dilimine dayanıklı tarih araması:** İşlemler "bugün" yerine dünden yarına uzanan bir tarih aralığında aranıyor. Testi çalıştıran bilgisayar ile sunucu farklı saat dilimlerindeyse (ör. gece yarısına yakın saatlerde) "bugün" iki tarafta farklı gün olabilir; aralık bu farkı tolere ediyor.
 - **API testleri ayrı katmanda:** API senaryoları da Gherkin ile yazılıyor ama kendi step'leri ve fixture'ları var (`steps/api/`). Arayüz fixture'ları her test için tarayıcı sayfası açtığından API testleri bunlardan ayrı tutuldu; API testleri hiç tarayıcı açmıyor. İstekler `ParaBankApiClient` üzerinden gidiyor: Step'ler adres ayrıntısını bilmiyor, Page Object'lerde olduğu gibi iş diliyle konuşuyor.
-- **Mesaja değil, bakiyeye güvenmek:** Para işlemlerinde "başarılı" cevabı yeterli sayılmıyor. İşlemden önce ve sonra hesap bakiyesi ayrıca okunup farkın tam işlem tutarı kadar olduğu doğrulanıyor; arayüzde ekrandan, API'de ayrı bir istekle.
+- **Ön koşullar API ile, test edilen adım arayüzden (hibrit test):** Bir senaryonun asıl konusu olmayan hazırlık adımları (müşteri kaydı, hesap açma, transfer, başlangıç bakiyelerinin okunması) tarayıcıda form doldurarak değil, API ile yapılıyor. Tarayıcı sadece test edilen ekranı açıyor. `page.request` tarayıcıyla aynı cookie'leri kullandığı için API ile kayıt olan müşteri tarayıcıda da giriş yapmış oluyor. Kayıt ve hesap açma ekranlarının kendisi yine kendi feature'larında arayüzden test ediliyor. Sonuç: Daha hızlı ve daha az kırılgan testler; paylaşılan sitede daha az istek, yani rate limit'e takılma riski daha düşük.
+- **Mesaja değil, bakiyeye güvenmek:** Para işlemlerinde "başarılı" cevabı yeterli sayılmıyor. İşlemden önce ve sonra hesap bakiyesi ayrıca okunup farkın tam işlem tutarı kadar olduğu doğrulanıyor; arayüz senaryolarında "önceki" bakiye API'den, "sonraki" bakiye ekrandan okunuyor; böylece ekranın sunucudaki gerçek bakiyeyi doğru gösterdiği de doğrulanmış oluyor.
 - **Asenkron işlemleri beklemek:** Transfer, hesap açma ve fatura ödeme istekleri arka planda (AJAX) gönderiliyor. Page Object'ler, işlem sonucu ekranda görünmeden bir sonraki adıma geçmiyor; böylece yarıda kalan istekler yüzünden oluşacak yanıltıcı sonuçlar önleniyor.
 
 ### Ortam hazırlığı
@@ -165,7 +166,7 @@ Testler sırasında ParaBank'ta bulunan ve **`@fail`** etiketiyle işaretlenen h
 - [x] **Aşama 2** — Yeni hesap açma (Scenario Outline), hesap özeti ve bakiye tutarlılığı, ortam hazırlığı (setup project)
 - [x] **Aşama 3** — Hesaplar arası para transferi ve iki hesapta bakiye doğrulama, fatura ödeme, bilinen hata yönetimi (`@fail`), rate limit'e karşı dayanıklılık, CI'da izole test ortamı (Docker)
 - [x] **Aşama 4** — Kredi başvurusu (farklı tutar ve sonuçlarla, sınır değer analizi), işlem arama, yetkilendirme açığının tespiti, ortam hazırlığının kredi ayarlarını da kapsaması
-- [ ] **Aşama 5** — API testleri, API ile hızlı test verisi hazırlama (hibrit test)
+- [x] **Aşama 5** — API testleri (müşteri, hesap ve para işlemleri), API'de bulunan güvenlik ve doğrulama hataları, ön koşulların API ile hazırlanması (hibrit test)
 - [ ] **Aşama 6** — Etiketler (@smoke, @regression), çoklu tarayıcı, sonuçların raporlanması
 
 ## Yazar

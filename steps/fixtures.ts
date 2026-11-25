@@ -8,11 +8,13 @@ import { TransferPage } from '../pages/TransferPage';
 import { BillPayPage } from '../pages/BillPayPage';
 import { RequestLoanPage } from '../pages/RequestLoanPage';
 import { FindTransactionsPage } from '../pages/FindTransactionsPage';
+import { ParaBankApiClient } from '../api/ParaBankApiClient';
 import { type Customer } from '../utils/testData';
 
 // Senaryo boyunca adımlar arasında taşınan veri
 export type ScenarioContext = {
   customer?: Customer;
+  customerId?: number; // ParaBank'ın müşteri numarası (API istekleri için)
   originalAccountId?: string; // Kayıtta otomatik açılan ilk hesap
   newAccountId?: string; // Senaryo içinde açılan yeni hesap
   loanAccountId?: string; // Onaylanan krediyle açılan kredi hesabı
@@ -31,6 +33,7 @@ type Fixtures = {
   billPayPage: BillPayPage;
   requestLoanPage: RequestLoanPage;
   findTransactionsPage: FindTransactionsPage;
+  api: ParaBankApiClient;
   ctx: ScenarioContext;
   requestGuard: void;
 };
@@ -63,6 +66,12 @@ export const test = base.extend<Fixtures>({
   },
   findTransactionsPage: async ({ page }, use) => {
     await use(new FindTransactionsPage(page));
+  },
+  // Ön koşulları (müşteri kaydı, hesap açma, transfer) hızlıca hazırlamak için API istemcisi.
+  // page.request tarayıcıyla aynı cookie'leri kullanıyor: API ile kayıt olunca tarayıcı da
+  // o müşteri olarak giriş yapmış oluyor ve test doğrudan asıl sayfadan başlayabiliyor.
+  api: async ({ page }, use) => {
+    await use(new ParaBankApiClient(page.request));
   },
   ctx: async ({}, use) => {
     await use({ balancesBefore: {} });

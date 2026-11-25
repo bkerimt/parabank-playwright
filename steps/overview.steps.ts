@@ -1,9 +1,8 @@
 import { expect } from '@playwright/test';
 import { Given, When, Then } from './fixtures';
 
-Given('the customer has noted the total balance', async ({ overviewPage, ctx }) => {
-  await overviewPage.goto();
-  ctx.totalBalanceBefore = await overviewPage.getTotalBalance();
+Given('the customer has noted the total balance', async ({ api, ctx }) => {
+  ctx.totalBalanceBefore = await api.getTotalBalance(ctx.customerId!);
 });
 
 When('the customer views the accounts overview', async ({ overviewPage }) => {

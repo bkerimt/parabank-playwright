@@ -1,11 +1,10 @@
 import { expect } from '@playwright/test';
 import { Given, When, Then, accountIdFor } from './fixtures';
 
-Given('the customer has total available funds of ${float}', async ({ overviewPage }, amount: number) => {
+Given('the customer has total available funds of ${float}', async ({ api, ctx }, amount: number) => {
   // Kredi kararı müşterinin toplam varlığına göre veriliyor. Senaryolardaki tutarlar bu değere göre
   // seçildiği için ön koşulu açıkça doğruluyoruz; değer farklıysa test burada, sebebiyle birlikte durur.
-  await overviewPage.goto();
-  expect(await overviewPage.getTotalBalance()).toBeCloseTo(amount, 2);
+  expect(await api.getTotalBalance(ctx.customerId!)).toBeCloseTo(amount, 2);
 });
 
 When(

@@ -3,23 +3,19 @@ import { Given, Then, accountIdFor } from './fixtures';
 
 // Para hareketi olan tüm feature'ların (transfer, fatura ödeme, kredi) kullandığı bakiye ve hareket adımları
 
-Given('the customer has noted the balance of the original account', async ({ overviewPage, accountDetailsPage, ctx }) => {
-  // Yeni kayıt olan müşterinin tek hesabı var: kayıtta otomatik açılan hesap
-  await overviewPage.goto();
-  const [originalAccountId] = await overviewPage.getAccountIds();
-  ctx.originalAccountId = originalAccountId;
-
-  await accountDetailsPage.goto(originalAccountId);
-  ctx.balancesBefore[originalAccountId] = await accountDetailsPage.getBalance();
+// "Önceki" bakiyeler API ile okunuyor, "sonraki" bakiyeler ekrandan. Böylece test aynı zamanda
+// ekranda gösterilen bakiyenin sunucudaki gerçek bakiyeyle tutarlı olduğunu da doğruluyor.
+Given('the customer has noted the balance of the original account', async ({ api, ctx }) => {
+  const accountId = accountIdFor('original', ctx);
+  ctx.balancesBefore[accountId] = await api.getBalance(Number(accountId));
 });
 
 Given(
   'the customer has noted the balances of the original and new accounts',
-  async ({ accountDetailsPage, ctx }) => {
+  async ({ api, ctx }) => {
     for (const role of ['original', 'new']) {
       const accountId = accountIdFor(role, ctx);
-      await accountDetailsPage.goto(accountId);
-      ctx.balancesBefore[accountId] = await accountDetailsPage.getBalance();
+      ctx.balancesBefore[accountId] = await api.getBalance(Number(accountId));
     }
   }
 );

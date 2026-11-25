@@ -1,29 +1,38 @@
 import { expect } from '@playwright/test';
-import { Given } from './fixtures';
-import { type RegisterPage } from '../pages/RegisterPage';
-import { type ScenarioContext } from './fixtures';
+import { Given, type ScenarioContext } from './fixtures';
+import { type ParaBankApiClient } from '../api/ParaBankApiClient';
 import { createCustomer } from '../utils/testData';
 
 // Birden fazla feature'ın kullandığı ortak adımlar
 
-// Kayıt olan müşteri ParaBank'ta otomatik olarak giriş yapmış olur
-async function registerNewCustomer(registerPage: RegisterPage, ctx: ScenarioContext) {
+/*
+ * Ön koşul olan müşteri kaydını formu doldurarak değil, API ile yapıyoruz.
+ * Kayıt formunun kendisi register.feature'da arayüzden test ediliyor; diğer senaryolarda
+ * kayıt sadece bir hazırlık adımı. Tarayıcıda aynı formu her seferinde doldurmak hem yavaş
+ * hem de paylaşılan sitede gereksiz istek (rate limit riski) demek.
+ */
+async function registerThroughApi(api: ParaBankApiClient, ctx: ScenarioContext) {
   const customer = createCustomer();
-  await registerPage.goto();
-  await registerPage.register(customer);
-  await expect(registerPage.pageTitle).toHaveText(`Welcome ${customer.username}`);
+  await api.registerCustomer(customer); // Kayıt olan müşteri otomatik olarak giriş yapmış olur
+
+  // Sonraki hazırlık adımları için müşteri ve ilk hesap numarasını API'den öğreniyoruz
+  const login = await api.login(customer.username, customer.password);
+  expect(login.status(), 'Yeni müşteri API ile giriş yapabilmeli').toBe(200);
+  const customerId: number = (await login.json()).id;
+  const [firstAccount] = await (await api.getAccounts(customerId)).json();
+
   ctx.customer = customer;
+  ctx.customerId = customerId;
+  ctx.originalAccountId = String(firstAccount.id);
 }
 
-Given('a logged-in customer', async ({ registerPage, ctx }) => {
-  await registerNewCustomer(registerPage, ctx);
+Given('a logged-in customer', async ({ api, ctx }) => {
+  await registerThroughApi(api, ctx);
 });
 
 // Yetki kontrolü senaryoları için: mevcut müşteri çıkış yapar, yerine yeni bir müşteri girer.
 // Önceki müşterinin not edilen verileri (ör. işlem numarası) senaryo verisinde kalır.
-Given('another customer is logged in', async ({ overviewPage, loginPage, registerPage, ctx }) => {
-  await overviewPage.logout();
-  // Çıkış tamamlanmadan kayda geçmiyoruz; giriş formu görününce oturum kapanmış demektir
-  await expect(loginPage.loginButton).toBeVisible();
-  await registerNewCustomer(registerPage, ctx);
+Given('another customer is logged in', async ({ api, ctx }) => {
+  await api.logout();
+  await registerThroughApi(api, ctx);
 });

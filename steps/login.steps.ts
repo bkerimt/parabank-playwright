@@ -2,12 +2,14 @@ import { expect } from '@playwright/test';
 import { Given, When, Then } from './fixtures';
 import { createCustomer } from '../utils/testData';
 
-Given('a registered customer exists', async ({ registerPage, overviewPage, ctx }) => {
+Given('a registered customer exists', async ({ api, loginPage, ctx }) => {
+  // Müşteriyi API ile kaydediyoruz. Kayıt otomatik giriş yaptığı için oturumu kapatıp
+  // giriş testini, gerçek kullanıcı gibi boş giriş formundan başlatıyoruz.
   const customer = createCustomer();
-  await registerPage.goto();
-  await registerPage.register(customer);
-  await overviewPage.logout();
+  await api.registerCustomer(customer);
+  await api.logout();
   ctx.customer = customer; // sonraki adımlar kullansın diye sakla
+  await loginPage.goto();
 });
 
 Given('the user is on the login page', async ({ loginPage }) => {

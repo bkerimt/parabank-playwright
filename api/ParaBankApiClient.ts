@@ -57,6 +57,12 @@ export class ParaBankApiClient {
     return this.get(`accounts/${accountId}/transactions`);
   }
 
+  // Müşterinin tüm hesaplarındaki toplam para (hesap özeti sayfasındaki "Total" satırının karşılığı)
+  async getTotalBalance(customerId: number): Promise<number> {
+    const accounts: { balance: number }[] = await (await this.getAccounts(customerId)).json();
+    return accounts.reduce((total, account) => total + account.balance, 0);
+  }
+
   // Doğrulama adımları için kısa yol: hesabın güncel bakiyesini sayı olarak döner
   async getBalance(accountId: number): Promise<number> {
     const response = await this.getAccount(accountId);
@@ -95,6 +101,12 @@ export class ParaBankApiClient {
    * 2) Sonra aynı oturumla formu POST ediyoruz. GET yapılmadan gönderilen form reddediliyor.
    * APIRequestContext cookie'leri kendisi saklayıp ikinci istekte geri gönderiyor.
    */
+  // Web oturumunu kapatır (sitedeki "Log Out" linkinin yaptığı istek)
+  async logout(): Promise<void> {
+    const response = await this.request.get('logout.htm');
+    throwIfRateLimited(response.status(), 'logout.htm');
+  }
+
   async registerCustomer(customer: Customer): Promise<void> {
     const formPage = await this.request.get('register.htm');
     throwIfRateLimited(formPage.status(), 'register.htm');

@@ -5,9 +5,17 @@ import { formatParaBankDate, daysFromToday } from '../utils/dates';
 
 Given(
   'the customer has noted the ID of the {string} transaction of ${float} on the {word} account',
-  async ({ accountDetailsPage, ctx }, description: string, amount: number, role: string) => {
-    await accountDetailsPage.goto(accountIdFor(role, ctx));
-    ctx.transactionId = await accountDetailsPage.getTransactionId(description, `$${amount.toFixed(2)}`);
+  async ({ api, ctx }, description: string, amount: number, role: string) => {
+    // İşlem numarasını hesap hareketleri sayfasını açmadan, API'den alıyoruz
+    const response = await api.getTransactions(Number(accountIdFor(role, ctx)));
+    const transactions: { id: number; description: string; amount: number }[] = await response.json();
+    const transaction = transactions.find(
+      (t) => t.description === description && Math.abs(t.amount - amount) < 0.005
+    );
+    if (!transaction) {
+      throw new Error(`"${description}" ($${amount.toFixed(2)}) işlemi bulunamadı: ${JSON.stringify(transactions)}`);
+    }
+    ctx.transactionId = String(transaction.id);
   }
 );
 

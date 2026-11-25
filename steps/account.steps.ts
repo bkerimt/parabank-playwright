@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import { Given, When, Then } from './fixtures';
 import { type OpenAccountPage } from '../pages/OpenAccountPage';
 import { type ScenarioContext } from './fixtures';
+import { type AccountType } from '../api/ParaBankApiClient';
 
 // İki step de aynı işi yapıyor; kodu tekrar yazmamak için ortak fonksiyon
 async function openNewAccount(openAccountPage: OpenAccountPage, ctx: ScenarioContext, accountType: string) {
@@ -15,10 +16,16 @@ When('the customer opens a new {string} account', async ({ openAccountPage, ctx 
   await openNewAccount(openAccountPage, ctx, accountType);
 });
 
-// Başka senaryolarda ön koşul olarak kullanılan hali
-Given('the customer has opened a new {string} account', async ({ openAccountPage, ctx }, accountType: string) => {
-  await openNewAccount(openAccountPage, ctx, accountType);
-});
+// Başka senaryolarda ön koşul olarak kullanılan hali: Hesap açma ekranı open-account.feature'da
+// test ediliyor; burada sadece hazırlık olduğu için hesabı API ile açıyoruz.
+Given(
+  'the customer has opened a new {string} account',
+  async ({ api, ctx }, accountType: AccountType) => {
+    const response = await api.createAccount(ctx.customerId!, accountType, Number(ctx.originalAccountId));
+    expect(response.status(), `Hesap açılamadı: ${await response.text()}`).toBe(200);
+    ctx.newAccountId = String((await response.json()).id);
+  }
+);
 
 Then('the account opened confirmation should be displayed', async ({ openAccountPage, ctx }) => {
   await expect(openAccountPage.resultTitle).toHaveText('Account Opened!');

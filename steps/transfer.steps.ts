@@ -1,13 +1,16 @@
 import { expect } from '@playwright/test';
 import { Given, When, Then, accountIdFor } from './fixtures';
 
-// Başka senaryolarda ön koşul olarak kullanılan hali: transferin tamamlandığından emin olur
+// Başka senaryolarda ön koşul olarak kullanılan hali: Transfer API ile yapılıyor
 Given(
   'the customer has transferred ${float} from the {word} account to the {word} account',
-  async ({ transferPage, ctx }, amount: number, fromRole: string, toRole: string) => {
-    await transferPage.goto();
-    await transferPage.transfer(amount, accountIdFor(fromRole, ctx), accountIdFor(toRole, ctx));
-    await expect(transferPage.resultTitle).toHaveText('Transfer Complete!');
+  async ({ api, ctx }, amount: number, fromRole: string, toRole: string) => {
+    const response = await api.transfer(
+      Number(accountIdFor(fromRole, ctx)),
+      Number(accountIdFor(toRole, ctx)),
+      amount
+    );
+    expect(response.status(), `Transfer yapılamadı: ${await response.text()}`).toBe(200);
   }
 );
 
